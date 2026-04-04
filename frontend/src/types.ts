@@ -1,0 +1,70 @@
+export interface Proxy {
+  id: string
+  domain: string
+  upstream: {
+    type: 'docker' | 'tailscale' | 'manual'
+    ref: string
+    port: number
+  }
+  cloudflare: {
+    zoneId: string
+    recordId: string
+  }
+  tls: {
+    enabled: boolean
+    email?: string
+  }
+  createdAt: string
+}
+
+export interface CreateProxyInput {
+  domain: string
+  upstream: { type: 'docker' | 'tailscale' | 'manual'; ref: string; port: number }
+  cloudflare: { zoneId: string; recordId?: string }
+  tls: { enabled: boolean; email?: string }
+}
+
+export interface ContainerInfo {
+  id: string
+  name: string
+  image: string
+  ports: Array<{ internal: number; external?: number }>
+  networks: string[]
+  networkIps: Record<string, string>
+  status: string
+}
+
+export interface TailscaleNode {
+  id: string
+  hostname: string
+  ipv4: string | null
+  ipv6: string | null
+  os: string
+  online: boolean
+}
+
+export interface Zone {
+  id: string
+  name: string
+  status: string
+}
+
+export interface DnsRecord {
+  id: string
+  name: string
+  type: string
+  content: string
+  proxied: boolean
+}
+
+export interface ProxyStatusResult {
+  status: 'active' | 'error'
+  reason?: string
+}
+
+export interface AppConfig {
+  acmeEmail: string
+}
+
+// Frontend-only: visual states including loading
+export type ProxyStatus = 'active' | 'error' | 'loading'

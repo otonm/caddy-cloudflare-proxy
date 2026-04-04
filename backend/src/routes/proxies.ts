@@ -6,7 +6,7 @@ import type { Proxy } from '../store/proxyStore'
 import { listRunningContainers } from '../clients/docker'
 import { listDevices } from '../clients/tailscale'
 import { createRecord, deleteRecord } from '../clients/cloudflare'
-import { addRoute, removeRoute } from '../clients/caddy'
+import { addRoute, getRoutes, removeRoute } from '../clients/caddy'
 import type { CaddyRoute } from '../clients/caddy'
 
 const router = Router()
@@ -24,6 +24,7 @@ const createProxySchema = z.object({
   upstream: upstreamSchema,
   cloudflare: z.object({
     zoneId: z.string().min(1),
+    recordId: z.string().optional(),
   }),
   tls: z.object({
     enabled: z.boolean(),
@@ -89,6 +90,25 @@ router.get('/', async (_req, res) => {
   }
 })
 
+router.get('/:id/status', async (req, res) => {
+  const proxy = await store.findById(req.params.id)
+  if (!proxy) {
+    res.status(404).json({ error: `Proxy not found: ${req.params.id}`, details: null })
+    return
+  }
+  try {
+    const routes = await getRoutes()
+    const exists = routes.some((r) => r['@id'] === `proxy-${proxy.id}`)
+    if (exists) {
+      res.json({ status: 'active' })
+    } else {
+      res.json({ status: 'error', reason: 'Caddy route not found' })
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to query Caddy', details: err instanceof Error ? err.message : null })
+  }
+})
+
 router.post('/', async (req, res) => {
   const parsed = createProxySchema.safeParse(req.body)
   if (!parsed.success) {
@@ -100,18 +120,21 @@ router.post('/', async (req, res) => {
 
   try {
     const ip = await resolveUpstreamIp(upstream)
-    const cfRecord = await createRecord(cloudflare.zoneId, { name: domain, type: 'A', content: ip, proxied: false })
+    const cfRecordId = cloudflare.recordId
+      ? cloudflare.recordId
+      : (await createRecord(cloudflare.zoneId, { name: domain, type: 'A', content: ip, proxied: false })).id
     const id = uuidv4()
     const proxy: Proxy = {
       id,
       domain,
       upstream,
-      cloudflare: { zoneId: cloudflare.zoneId, recordId: cfRecord.id },
+      cloudflare: { zoneId: cloudflare.zoneId, recordId: cfRecordId },
       tls,
       createdAt: new Date().toISOString(),
     }
     await addRoute(buildCaddyRoute(id, domain, ip, upstream.port))
     await store.add(proxy)
+
     res.status(201).json(proxy)
   } catch (err) {
     res.status(500).json({ error: 'Failed to create proxy', details: err instanceof Error ? err.message : null })
@@ -152,13 +175,10 @@ router.put('/:id', async (req, res) => {
       await removeRoute(existing.id)
       await deleteRecord(existing.cloudflare.zoneId, existing.cloudflare.recordId)
       const ip = await resolveUpstreamIp(updated.upstream)
-      const cfRecord = await createRecord(updated.cloudflare.zoneId, {
-        name: updated.domain,
-        type: 'A',
-        content: ip,
-        proxied: false,
-      })
-      updated.cloudflare = { ...updated.cloudflare, recordId: cfRecord.id }
+      const newRecordId = patch.cloudflare?.recordId
+        ? patch.cloudflare.recordId
+        : (await createRecord(updated.cloudflare.zoneId, { name: updated.domain, type: 'A', content: ip, proxied: false })).id
+      updated.cloudflare = { ...updated.cloudflare, recordId: newRecordId }
       await addRoute(buildCaddyRoute(updated.id, updated.domain, ip, updated.upstream.port))
     }
 

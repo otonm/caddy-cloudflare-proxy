@@ -20,6 +20,10 @@ app.get('/api/health', (_req, res) => {
 // Apply Tailscale IP auth to all subsequent routes
 app.use(tailscaleAuth)
 
+app.get('/api/config', (_req, res) => {
+  res.json({ acmeEmail: process.env.ACME_EMAIL ?? '' })
+})
+
 app.use('/api/proxies', proxiesRouter)
 app.use('/api/docker', dockerRouter)
 app.use('/api/tailscale', tailscaleRouter)

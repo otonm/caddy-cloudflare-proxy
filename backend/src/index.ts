@@ -1,6 +1,10 @@
 import express from 'express'
 import cors from 'cors'
 import { tailscaleAuth } from './middleware/tailscaleAuth'
+import proxiesRouter, { syncProxiesToCaddy } from './routes/proxies'
+import dockerRouter from './routes/docker'
+import tailscaleRouter from './routes/tailscale'
+import cloudflareRouter from './routes/cloudflare'
 
 const app = express()
 const PORT = parseInt(process.env.APP_PORT ?? '3000', 10)
@@ -16,7 +20,10 @@ app.get('/api/health', (_req, res) => {
 // Apply Tailscale IP auth to all subsequent routes
 app.use(tailscaleAuth)
 
-// TODO: mount API routers (Steps 2–3)
+app.use('/api/proxies', proxiesRouter)
+app.use('/api/docker', dockerRouter)
+app.use('/api/tailscale', tailscaleRouter)
+app.use('/api/cloudflare', cloudflareRouter)
 
 // Serve frontend static files in production
 if (process.env.NODE_ENV === 'production') {
@@ -38,8 +45,7 @@ async function start() {
     console.log(`App listening on port ${PORT}`)
   })
 
-  // Sync proxies to Caddy on startup — implemented in Step 2
-  // await syncProxiesToCaddy()
+  await syncProxiesToCaddy()
 }
 
 start().catch((err) => {

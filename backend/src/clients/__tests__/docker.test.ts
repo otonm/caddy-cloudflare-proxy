@@ -36,6 +36,7 @@ describe('listRunningContainers', () => {
         image: 'nginx:latest',
         ports: [{ internal: 80, external: 8080 }],
         networks: ['bridge', 'mynet'],
+        networkIps: { bridge: '', mynet: '' },
         status: 'Up 2 hours',
       },
     ])

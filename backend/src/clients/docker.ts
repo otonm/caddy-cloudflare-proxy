@@ -6,6 +6,7 @@ export interface ContainerInfo {
   image: string
   ports: { internal: number; external?: number }[]
   networks: string[]
+  networkIps: Record<string, string>
   status: string
 }
 
@@ -19,6 +20,9 @@ export async function listRunningContainers(): Promise<ContainerInfo[]> {
     image: c.Image,
     ports: c.Ports.map((p) => ({ internal: p.PrivatePort, external: p.PublicPort })),
     networks: Object.keys(c.NetworkSettings.Networks),
+    networkIps: Object.fromEntries(
+      Object.entries(c.NetworkSettings.Networks).map(([name, net]) => [name, (net as any).IPAddress ?? ''])
+    ),
     status: c.Status,
   }))
 }

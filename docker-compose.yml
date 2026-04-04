@@ -1,0 +1,49 @@
+services:
+  caddy:
+    image: ghcr.io/caddybuilds/caddy-cloudflare:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./data/caddy:/data
+      - ./data/caddy-config:/config
+    environment:
+      CF_API_TOKEN: ${CF_API_TOKEN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:2019/config/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./data/app:/data
+    environment:
+      NODE_ENV: production
+      CF_API_TOKEN: ${CF_API_TOKEN}
+      TS_API_KEY: ${TS_API_KEY}
+      TS_TAILNET: ${TS_TAILNET}
+      CADDY_ADMIN_URL: ${CADDY_ADMIN_URL:-http://caddy:2019}
+      ACME_EMAIL: ${ACME_EMAIL}
+      DATA_DIR: /data
+      APP_PORT: 3000
+      DISABLE_AUTH: ${DISABLE_AUTH:-false}
+    depends_on:
+      caddy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

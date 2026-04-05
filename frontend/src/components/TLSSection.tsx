@@ -41,7 +41,6 @@ export function TLSSection({ control, acmeEmail }: TLSSectionProps) {
                 id="tls-email"
                 type="email"
                 placeholder="you@example.com"
-                disabled={!!acmeEmail}
               />
             )}
           />
@@ -49,7 +48,9 @@ export function TLSSection({ control, acmeEmail }: TLSSectionProps) {
             <p className="text-destructive text-xs">{errors.tls.email.message}</p>
           )}
           {!!acmeEmail && (
-            <p className="text-muted-foreground text-xs">Set via ACME_EMAIL environment variable</p>
+            <p className="text-muted-foreground text-xs">
+              Defaulting to ACME_EMAIL — edit to use a different address for this domain
+            </p>
           )}
         </div>
       )}

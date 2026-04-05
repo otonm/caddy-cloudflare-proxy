@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { CaddyRoute } from '../clients/caddy';
-import { addRoute, getRoutes, removeRoute } from '../clients/caddy';
+import { addRoute, getRoutes, removeRoute, removeTLSPolicy, upsertTLSPolicy } from '../clients/caddy';
 import { createRecord, deleteRecord } from '../clients/cloudflare';
 import { listRunningContainers } from '../clients/docker';
 import { listDevices } from '../clients/tailscale';
@@ -73,6 +73,9 @@ export async function syncProxiesToCaddy(): Promise<void> {
     try {
       const ip = await resolveUpstreamIp(proxy.upstream);
       await addRoute(buildCaddyRoute(proxy.id, proxy.domain, ip, proxy.upstream.port));
+      if (proxy.tls.enabled && proxy.tls.email) {
+        await upsertTLSPolicy(proxy.domain, proxy.tls.email);
+      }
       console.log(`[sync] restored proxy ${proxy.id} (${proxy.domain})`);
     } catch (err) {
       console.error(`[sync] skipped proxy ${proxy.id}: ${(err as Error).message}`);
@@ -146,6 +149,9 @@ router.post('/', async (req, res) => {
       createdAt: new Date().toISOString(),
     };
     await addRoute(buildCaddyRoute(id, domain, ip, upstream.port));
+    if (tls.enabled && tls.email) {
+      await upsertTLSPolicy(domain, tls.email);
+    }
     await store.add(proxy);
 
     res.status(201).json(proxy);
@@ -207,6 +213,17 @@ router.put('/:id', async (req, res) => {
       await addRoute(buildCaddyRoute(updated.id, updated.domain, ip, updated.upstream.port));
     }
 
+    // Remove old TLS policy if domain changed or TLS is being disabled
+    if (existing.tls.enabled && existing.tls.email) {
+      if (updated.domain !== existing.domain || !updated.tls.enabled) {
+        await removeTLSPolicy(existing.domain);
+      }
+    }
+    // Upsert new TLS policy (handles both new and email/domain changes)
+    if (updated.tls.enabled && updated.tls.email) {
+      await upsertTLSPolicy(updated.domain, updated.tls.email);
+    }
+
     await store.update(existing.id, updated);
     res.json(updated);
   } catch (err) {
@@ -226,6 +243,9 @@ router.delete('/:id', async (req, res) => {
 
   try {
     await removeRoute(proxy.id);
+    if (proxy.tls.enabled && proxy.tls.email) {
+      await removeTLSPolicy(proxy.domain);
+    }
     await deleteRecord(proxy.cloudflare.zoneId, proxy.cloudflare.recordId);
     await store.remove(proxy.id);
     res.status(204).send();

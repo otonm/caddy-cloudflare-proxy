@@ -8,6 +8,11 @@ export interface CaddyRoute {
   terminal: boolean;
 }
 
+export interface CaddyTLSPolicy {
+  subjects: string[];
+  issuers: [{ module: 'acme'; email: string }];
+}
+
 async function caddyFetch(path: string, options?: RequestInit): Promise<Response> {
   const res = await fetch(`${BASE_URL}${path}`, options);
   if (!res.ok) {
@@ -53,4 +58,60 @@ export async function addRoute(route: CaddyRoute): Promise<void> {
 
 export async function removeRoute(routeId: string): Promise<void> {
   await caddyFetch(`/id/${encodeURIComponent(routeId)}`, { method: 'DELETE' });
+}
+
+// ─── TLS automation policies ─────────────────────────────────────────────────
+
+async function getAutomationPolicies(): Promise<CaddyTLSPolicy[]> {
+  const res = await fetch(`${BASE_URL}/config/apps/tls/automation/policies`);
+  if (res.status === 404) return [];
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Caddy GET policies → ${res.status}: ${body}`);
+  }
+  const data = await res.json();
+  return Array.isArray(data) ? (data as CaddyTLSPolicy[]) : [];
+}
+
+async function findPolicyIndex(domain: string): Promise<number> {
+  const policies = await getAutomationPolicies();
+  return policies.findIndex((p) => p.subjects?.includes(domain));
+}
+
+export async function upsertTLSPolicy(domain: string, email: string): Promise<void> {
+  const policy: CaddyTLSPolicy = {
+    subjects: [domain],
+    issuers: [{ module: 'acme', email }],
+  };
+  const index = await findPolicyIndex(domain);
+  if (index >= 0) {
+    await caddyFetch(`/config/apps/tls/automation/policies/${index}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(policy),
+    });
+    return;
+  }
+  // Append to existing array; fall back to creating it if the path doesn't exist yet
+  const appendRes = await fetch(`${BASE_URL}/config/apps/tls/automation/policies/...`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(policy),
+  });
+  if (appendRes.ok) return;
+  const createRes = await fetch(`${BASE_URL}/config/apps/tls/automation/policies`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify([policy]),
+  });
+  if (!createRes.ok) {
+    const body = await createRes.text();
+    throw new Error(`Caddy upsertTLSPolicy failed: ${createRes.status}: ${body}`);
+  }
+}
+
+export async function removeTLSPolicy(domain: string): Promise<void> {
+  const index = await findPolicyIndex(domain);
+  if (index < 0) return;
+  await caddyFetch(`/config/apps/tls/automation/policies/${index}`, { method: 'DELETE' });
 }

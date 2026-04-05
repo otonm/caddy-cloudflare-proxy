@@ -8,7 +8,7 @@ import { listRunningContainers } from '../clients/docker';
 import { listDevices } from '../clients/tailscale';
 import type { Proxy } from '../store/proxyStore';
 import * as store from '../store/proxyStore';
-import { isUpstreamError } from '../utils';
+import { debug, isUpstreamError } from '../utils';
 
 const router = Router();
 
@@ -39,12 +39,14 @@ const updateProxySchema = createProxySchema.partial();
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 export async function resolveUpstreamIp(upstream: Proxy['upstream']): Promise<string> {
+  debug('[proxies]', 'resolveUpstreamIp', upstream.type, upstream.ref);
   if (upstream.type === 'docker') {
     const containers = await listRunningContainers();
     const c = containers.find((c) => c.name === upstream.ref);
     if (!c) throw new Error(`Container not found: ${upstream.ref}`);
     const ip = c.networkIps.bridge ?? Object.values(c.networkIps).find(Boolean);
     if (!ip) throw new Error(`No network IP for container: ${upstream.ref}`);
+    debug('[proxies]', 'resolved docker ip', ip);
     return ip;
   }
   if (upstream.type === 'tailscale') {
@@ -52,8 +54,10 @@ export async function resolveUpstreamIp(upstream: Proxy['upstream']): Promise<st
     const d = devices.find((d) => d.hostname === upstream.ref);
     if (!d) throw new Error(`Tailscale node not found: ${upstream.ref}`);
     if (!d.ipv4) throw new Error(`No IPv4 for Tailscale node: ${upstream.ref}`);
+    debug('[proxies]', 'resolved tailscale ip', d.ipv4);
     return d.ipv4;
   }
+  debug('[proxies]', 'resolved manual ref', upstream.ref);
   return upstream.ref; // manual: ref is the host
 }
 
@@ -129,8 +133,10 @@ router.post('/', async (req, res) => {
   const { domain, upstream, cloudflare, tls } = parsed.data;
 
   try {
+    debug('[proxies]', 'create', { domain, upstream, cloudflare, tls });
     const ip = await resolveUpstreamIp(upstream);
     const dnsIp = upstream.publicIp ?? ip;
+    debug('[proxies]', 'dns target ip', dnsIp, cloudflare.recordId ? '(existing record)' : '(new record)');
     const cfRecordId = cloudflare.recordId
       ? cloudflare.recordId
       : (
@@ -141,6 +147,7 @@ router.post('/', async (req, res) => {
             proxied: false,
           })
         ).id;
+    debug('[proxies]', 'cf record id', cfRecordId);
     const id = uuidv4();
     const proxy: Proxy = {
       id,
@@ -151,13 +158,16 @@ router.post('/', async (req, res) => {
       createdAt: new Date().toISOString(),
     };
     await addRoute(buildCaddyRoute(id, domain, ip, upstream.port));
+    debug('[proxies]', 'caddy route added');
     if (tls.enabled && tls.email) {
       await upsertTLSPolicy(domain, tls.email, process.env.CF_API_TOKEN!);
+      debug('[proxies]', 'tls policy upserted');
     }
     await store.add(proxy);
 
     res.status(201).json(proxy);
   } catch (err) {
+    console.error('[proxies] create failed:', err);
     res.status(isUpstreamError(err) ? 502 : 500).json({
       error: 'Failed to create proxy',
       details: err instanceof Error ? err.message : null,

@@ -20,7 +20,7 @@ afterEach(() => {
 
 function mockFetch(responses: { url?: string | RegExp; ok: boolean; body?: unknown }[]) {
   let callIndex = 0;
-  vi.spyOn(global, 'fetch').mockImplementation(async (url) => {
+  vi.spyOn(global, 'fetch').mockImplementation(async (_url) => {
     const entry = responses[callIndex] ?? responses[responses.length - 1];
     callIndex++;
     return {
@@ -117,13 +117,33 @@ describe('removeRoute', () => {
     );
   });
 
-  it('throws when DELETE fails', async () => {
+  it('resolves silently when route is already gone (404)', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: false,
       status: 404,
       text: () => Promise.resolve('not found'),
     } as Response);
     const { removeRoute } = await import('../caddy');
-    await expect(removeRoute('missing')).rejects.toThrow('404');
+    await expect(removeRoute('missing')).resolves.toBeUndefined();
+  });
+
+  it('resolves silently when route is already gone (400)', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: () => Promise.resolve('invalid traversal path'),
+    } as Response);
+    const { removeRoute } = await import('../caddy');
+    await expect(removeRoute('missing')).resolves.toBeUndefined();
+  });
+
+  it('throws when DELETE fails with a server error', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 500,
+      text: () => Promise.resolve('internal error'),
+    } as Response);
+    const { removeRoute } = await import('../caddy');
+    await expect(removeRoute('proxy-abc')).rejects.toThrow('500');
   });
 });

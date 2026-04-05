@@ -11,6 +11,7 @@ configs:
 services:
   caddy:
     image: ghcr.io/caddybuilds/caddy-cloudflare:latest
+    container_name: caddy
     restart: unless-stopped
     command: caddy run --config /etc/caddy/config.json --adapter json --resume
     ports:
@@ -31,6 +32,7 @@ services:
 
   app:
     image: ghcr.io/otonm/caddy-cloudflare-proxy:latest
+    container_name: proxy
     restart: unless-stopped
     ports:
       - 3000:3000

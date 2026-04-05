@@ -1,6 +1,5 @@
 import cors from 'cors';
 import express from 'express';
-import { tailscaleAuth } from './middleware/tailscaleAuth';
 import cloudflareRouter from './routes/cloudflare';
 import dockerRouter from './routes/docker';
 import proxiesRouter, { syncProxiesToCaddy } from './routes/proxies';
@@ -16,9 +15,6 @@ app.use(express.json());
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true });
 });
-
-// Apply Tailscale IP auth to all subsequent routes
-app.use(tailscaleAuth);
 
 app.get('/api/config', (_req, res) => {
   res.json({ acmeEmail: process.env.ACME_EMAIL ?? '' });

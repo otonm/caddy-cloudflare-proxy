@@ -74,7 +74,7 @@ export async function syncProxiesToCaddy(): Promise<void> {
       const ip = await resolveUpstreamIp(proxy.upstream);
       await addRoute(buildCaddyRoute(proxy.id, proxy.domain, ip, proxy.upstream.port));
       if (proxy.tls.enabled && proxy.tls.email) {
-        await upsertTLSPolicy(proxy.domain, proxy.tls.email);
+        await upsertTLSPolicy(proxy.domain, proxy.tls.email, process.env.CF_API_TOKEN!);
       }
       console.log(`[sync] restored proxy ${proxy.id} (${proxy.domain})`);
     } catch (err) {
@@ -150,7 +150,7 @@ router.post('/', async (req, res) => {
     };
     await addRoute(buildCaddyRoute(id, domain, ip, upstream.port));
     if (tls.enabled && tls.email) {
-      await upsertTLSPolicy(domain, tls.email);
+      await upsertTLSPolicy(domain, tls.email, process.env.CF_API_TOKEN!);
     }
     await store.add(proxy);
 
@@ -221,7 +221,7 @@ router.put('/:id', async (req, res) => {
     }
     // Upsert new TLS policy (handles both new and email/domain changes)
     if (updated.tls.enabled && updated.tls.email) {
-      await upsertTLSPolicy(updated.domain, updated.tls.email);
+      await upsertTLSPolicy(updated.domain, updated.tls.email, process.env.CF_API_TOKEN!);
     }
 
     await store.update(existing.id, updated);

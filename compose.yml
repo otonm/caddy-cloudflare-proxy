@@ -9,11 +9,8 @@ services:
     volumes:
       - caddy-data:/data
       - caddy-config:/config
-    configs:
-      - source: caddyfile
-        target: /etc/caddy/Caddyfile
     environment:
-      CF_API_TOKEN: ${CF_API_TOKEN}
+      CADDY_ADMIN: 0.0.0.0:2019
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:2019/config/"]
       interval: 10s
@@ -49,11 +46,3 @@ volumes:
   caddy-data:
   caddy-config:
   app-data:
-
-configs:
-  caddyfile:
-    content: |
-      {
-        admin 0.0.0.0:2019
-        acme_dns cloudflare {env.CF_API_TOKEN}
-      }

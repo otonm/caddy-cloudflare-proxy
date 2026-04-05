@@ -10,7 +10,13 @@ export interface CaddyRoute {
 
 export interface CaddyTLSPolicy {
   subjects: string[];
-  issuers: [{ module: 'acme'; email: string }];
+  issuers: [
+    {
+      module: 'acme';
+      email: string;
+      challenges: { dns: { provider: { name: 'cloudflare'; api_token: string } } };
+    },
+  ];
 }
 
 async function caddyFetch(path: string, options?: RequestInit): Promise<Response> {
@@ -78,10 +84,10 @@ async function findPolicyIndex(domain: string): Promise<number> {
   return policies.findIndex((p) => p.subjects?.includes(domain));
 }
 
-export async function upsertTLSPolicy(domain: string, email: string): Promise<void> {
+export async function upsertTLSPolicy(domain: string, email: string, cfToken: string): Promise<void> {
   const policy: CaddyTLSPolicy = {
     subjects: [domain],
-    issuers: [{ module: 'acme', email }],
+    issuers: [{ module: 'acme', email, challenges: { dns: { provider: { name: 'cloudflare', api_token: cfToken } } } }],
   };
   const index = await findPolicyIndex(domain);
   if (index >= 0) {

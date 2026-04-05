@@ -1,53 +1,67 @@
-import { useEffect, useState } from 'react'
-import type { Control } from 'react-hook-form'
-import { Controller, useFormContext, useWatch } from 'react-hook-form'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
+import { useEffect, useState } from 'react';
+import type { Control } from 'react-hook-form';
+import { Controller, useFormContext, useWatch } from 'react-hook-form';
+import type { ProxyFormValues } from '@/components/ProxyDialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
-import { useDockerContainers } from '@/hooks/useDockerContainers'
-import { useTailscaleNodes } from '@/hooks/useTailscaleNodes'
-import type { ProxyFormValues } from '@/components/ProxyDialog'
-import type { ContainerInfo } from '@/types'
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useDockerContainers } from '@/hooks/useDockerContainers';
+import { useTailscaleNodes } from '@/hooks/useTailscaleNodes';
+import type { ContainerInfo } from '@/types';
 
 interface UpstreamPickerProps {
-  control: Control<ProxyFormValues>
+  control: Control<ProxyFormValues>;
 }
 
 export function UpstreamPicker({ control }: UpstreamPickerProps) {
-  const { register, setValue, watch, formState: { errors } } = useFormContext<ProxyFormValues>()
-  const upstreamType = watch('upstream.type')
+  const {
+    register,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useFormContext<ProxyFormValues>();
+  const upstreamType = watch('upstream.type');
 
-  const containers = useDockerContainers()
-  const nodes = useTailscaleNodes()
+  const containers = useDockerContainers();
+  const nodes = useTailscaleNodes();
 
   function handleTabChange(type: 'docker' | 'tailscale' | 'manual') {
-    setValue('upstream.type', type)
-    setValue('upstream.ref', '')
-    setValue('upstream.port', 80)
+    setValue('upstream.type', type);
+    setValue('upstream.ref', '');
+    setValue('upstream.port', 80);
   }
 
-  const selectedContainerName = useWatch({ control, name: 'upstream.ref' })
+  const selectedContainerName = useWatch({ control, name: 'upstream.ref' });
   const selectedContainer =
     upstreamType === 'docker'
       ? containers.data?.find((c) => c.name === selectedContainerName)
-      : undefined
+      : undefined;
 
   return (
     <div className="space-y-2">
       <Label>Upstream</Label>
-      <Tabs value={upstreamType} onValueChange={(v) => handleTabChange(v as 'docker' | 'tailscale' | 'manual')}>
+      <Tabs
+        value={upstreamType}
+        onValueChange={(v) => handleTabChange(v as 'docker' | 'tailscale' | 'manual')}
+      >
         <TabsList className="w-full">
-          <TabsTrigger value="docker" className="flex-1">Docker</TabsTrigger>
-          <TabsTrigger value="tailscale" className="flex-1">Tailscale</TabsTrigger>
-          <TabsTrigger value="manual" className="flex-1">Manual</TabsTrigger>
+          <TabsTrigger value="docker" className="flex-1">
+            Docker
+          </TabsTrigger>
+          <TabsTrigger value="tailscale" className="flex-1">
+            Tailscale
+          </TabsTrigger>
+          <TabsTrigger value="manual" className="flex-1">
+            Manual
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="docker" className="space-y-3 pt-2">
@@ -65,9 +79,9 @@ export function UpstreamPicker({ control }: UpstreamPickerProps) {
                   <Select
                     value={field.value}
                     onValueChange={(name) => {
-                      field.onChange(name)
-                      const container = containers.data?.find((c) => c.name === name)
-                      setValue('upstream.port', container?.ports[0]?.internal ?? 80)
+                      field.onChange(name);
+                      const container = containers.data?.find((c) => c.name === name);
+                      setValue('upstream.port', container?.ports[0]?.internal ?? 80);
                     }}
                   >
                     <SelectTrigger id="docker-ref">
@@ -76,7 +90,8 @@ export function UpstreamPicker({ control }: UpstreamPickerProps) {
                     <SelectContent className="min-w-[var(--radix-select-trigger-width)] w-auto max-w-md">
                       {containers.data?.map((c) => (
                         <SelectItem key={c.id} value={c.name}>
-                          {c.name} <span className="text-muted-foreground ml-1 text-xs">({c.image})</span>
+                          {c.name}{' '}
+                          <span className="text-muted-foreground ml-1 text-xs">({c.image})</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -117,7 +132,9 @@ export function UpstreamPicker({ control }: UpstreamPickerProps) {
                       {nodes.data?.map((n) => (
                         <SelectItem key={n.id} value={n.hostname}>
                           {n.hostname}
-                          <span className={`ml-2 text-xs ${n.online ? 'text-green-600' : 'text-muted-foreground'}`}>
+                          <span
+                            className={`ml-2 text-xs ${n.online ? 'text-green-600' : 'text-muted-foreground'}`}
+                          >
                             {n.online ? '● online' : '○ offline'}
                           </span>
                         </SelectItem>
@@ -146,7 +163,7 @@ export function UpstreamPicker({ control }: UpstreamPickerProps) {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
 
 function DockerPortField({
@@ -156,19 +173,21 @@ function DockerPortField({
   errors,
   setValue,
 }: {
-  container: ContainerInfo | undefined
-  control: Control<ProxyFormValues>
-  register: ReturnType<typeof useFormContext<ProxyFormValues>>['register']
-  errors: ReturnType<typeof useFormContext<ProxyFormValues>>['formState']['errors']
-  setValue: ReturnType<typeof useFormContext<ProxyFormValues>>['setValue']
+  container: ContainerInfo | undefined;
+  control: Control<ProxyFormValues>;
+  register: ReturnType<typeof useFormContext<ProxyFormValues>>['register'];
+  errors: ReturnType<typeof useFormContext<ProxyFormValues>>['formState']['errors'];
+  setValue: ReturnType<typeof useFormContext<ProxyFormValues>>['setValue'];
 }) {
-  const [useCustomPort, setUseCustomPort] = useState(false)
-  const portValue = useWatch({ control, name: 'upstream.port' })
-  const ports = container?.ports ?? []
+  const [useCustomPort, setUseCustomPort] = useState(false);
+  const portValue = useWatch({ control, name: 'upstream.port' });
+  const ports = container?.ports ?? [];
+  const containerName = container?.name;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: containerName is intentional — resets state when the selected container changes
   useEffect(() => {
-    setUseCustomPort(false)
-  }, [container?.name])
+    setUseCustomPort(false);
+  }, [containerName]);
 
   if (ports.length === 1) {
     return (
@@ -178,7 +197,7 @@ function DockerPortField({
           {ports[0].internal}
         </p>
       </div>
-    )
+    );
   }
 
   if (ports.length > 1) {
@@ -189,10 +208,10 @@ function DockerPortField({
           value={useCustomPort ? '__custom__' : String(portValue)}
           onValueChange={(v) => {
             if (v === '__custom__') {
-              setUseCustomPort(true)
+              setUseCustomPort(true);
             } else {
-              setUseCustomPort(false)
-              setValue('upstream.port', Number(v))
+              setUseCustomPort(false);
+              setValue('upstream.port', Number(v));
             }
           }}
         >
@@ -202,7 +221,8 @@ function DockerPortField({
           <SelectContent className="min-w-[var(--radix-select-trigger-width)]">
             {ports.map((p) => (
               <SelectItem key={p.internal} value={String(p.internal)}>
-                {p.internal}{p.external ? ` (→ ${p.external} on host)` : ''}
+                {p.internal}
+                {p.external ? ` (→ ${p.external} on host)` : ''}
               </SelectItem>
             ))}
             <SelectItem value="__custom__">Custom…</SelectItem>
@@ -222,18 +242,18 @@ function DockerPortField({
           <p className="text-destructive text-xs">{errors.upstream.port.message}</p>
         )}
       </div>
-    )
+    );
   }
 
-  return <PortField register={register} errors={errors} />
+  return <PortField register={register} errors={errors} />;
 }
 
 function PortField({
   register,
   errors,
 }: {
-  register: ReturnType<typeof useFormContext<ProxyFormValues>>['register']
-  errors: ReturnType<typeof useFormContext<ProxyFormValues>>['formState']['errors']
+  register: ReturnType<typeof useFormContext<ProxyFormValues>>['register'];
+  errors: ReturnType<typeof useFormContext<ProxyFormValues>>['formState']['errors'];
 }) {
   return (
     <div className="space-y-1">
@@ -249,5 +269,5 @@ function PortField({
         <p className="text-destructive text-xs">{errors.upstream.port.message}</p>
       )}
     </div>
-  )
+  );
 }

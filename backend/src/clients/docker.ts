@@ -1,19 +1,19 @@
-import Docker from 'dockerode'
+import Docker from 'dockerode';
 
 export interface ContainerInfo {
-  id: string
-  name: string
-  image: string
-  ports: { internal: number; external?: number }[]
-  networks: string[]
-  networkIps: Record<string, string>
-  status: string
+  id: string;
+  name: string;
+  image: string;
+  ports: { internal: number; external?: number }[];
+  networks: string[];
+  networkIps: Record<string, string>;
+  status: string;
 }
 
-const docker = new Docker({ socketPath: '/var/run/docker.sock' })
+const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 
 export async function listRunningContainers(): Promise<ContainerInfo[]> {
-  const containers = await docker.listContainers()
+  const containers = await docker.listContainers();
   return containers.map((c) => ({
     id: c.Id,
     name: (c.Names[0] ?? '').replace(/^\//, ''),
@@ -21,8 +21,11 @@ export async function listRunningContainers(): Promise<ContainerInfo[]> {
     ports: c.Ports.map((p) => ({ internal: p.PrivatePort, external: p.PublicPort })),
     networks: Object.keys(c.NetworkSettings.Networks),
     networkIps: Object.fromEntries(
-      Object.entries(c.NetworkSettings.Networks).map(([name, net]) => [name, (net as any).IPAddress ?? ''])
+      Object.entries(c.NetworkSettings.Networks).map(([name, net]) => [
+        name,
+        (net as any).IPAddress ?? '',
+      ]),
     ),
     status: c.Status,
-  }))
+  }));
 }

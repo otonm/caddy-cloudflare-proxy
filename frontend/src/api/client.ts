@@ -1,26 +1,26 @@
 import type {
-  Proxy,
-  CreateProxyInput,
+  AppConfig,
   ContainerInfo,
+  CreateProxyInput,
+  DnsRecord,
+  Proxy,
+  ProxyStatusResult,
   TailscaleNode,
   Zone,
-  DnsRecord,
-  ProxyStatusResult,
-  AppConfig,
-} from '@/types'
+} from '@/types';
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, init)
+  const res = await fetch(path, init);
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`)
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
   }
-  if (res.status === 204) return undefined as T
-  return res.json() as Promise<T>
+  if (res.status === 204) return undefined as T;
+  return res.json() as Promise<T>;
 }
 
 export function getProxies(): Promise<Proxy[]> {
-  return apiFetch('/api/proxies')
+  return apiFetch('/api/proxies');
 }
 
 export function createProxy(data: CreateProxyInput): Promise<Proxy> {
@@ -28,7 +28,7 @@ export function createProxy(data: CreateProxyInput): Promise<Proxy> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
-  })
+  });
 }
 
 export function updateProxy(id: string, data: Partial<CreateProxyInput>): Promise<Proxy> {
@@ -36,33 +36,33 @@ export function updateProxy(id: string, data: Partial<CreateProxyInput>): Promis
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
-  })
+  });
 }
 
 export async function deleteProxy(id: string): Promise<void> {
-  await apiFetch(`/api/proxies/${id}`, { method: 'DELETE' })
+  await apiFetch(`/api/proxies/${id}`, { method: 'DELETE' });
 }
 
 export function getProxyStatus(id: string): Promise<ProxyStatusResult> {
-  return apiFetch(`/api/proxies/${id}/status`)
+  return apiFetch(`/api/proxies/${id}/status`);
 }
 
 export function getDockerContainers(): Promise<ContainerInfo[]> {
-  return apiFetch('/api/docker/containers')
+  return apiFetch('/api/docker/containers');
 }
 
 export function getTailscaleNodes(): Promise<TailscaleNode[]> {
-  return apiFetch('/api/tailscale/nodes')
+  return apiFetch('/api/tailscale/nodes');
 }
 
 export function getCloudflareZones(): Promise<Zone[]> {
-  return apiFetch('/api/cloudflare/zones')
+  return apiFetch('/api/cloudflare/zones');
 }
 
 export function getCloudflareRecords(zoneId: string): Promise<DnsRecord[]> {
-  return apiFetch(`/api/cloudflare/${zoneId}/records`)
+  return apiFetch(`/api/cloudflare/${zoneId}/records`);
 }
 
 export function getConfig(): Promise<AppConfig> {
-  return apiFetch('/api/config')
+  return apiFetch('/api/config');
 }

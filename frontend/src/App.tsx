@@ -1,25 +1,25 @@
-import { useState } from 'react'
-import { ProxyDialog } from '@/components/ProxyDialog'
-import { ProxyTable } from '@/components/ProxyTable'
-import type { Proxy } from '@/types'
+import { useState } from 'react';
+import { ProxyDialog } from '@/components/ProxyDialog';
+import { ProxyTable } from '@/components/ProxyTable';
+import type { Proxy } from '@/types';
 
 export default function App() {
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editProxy, setEditProxy] = useState<Proxy | undefined>()
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editProxy, setEditProxy] = useState<Proxy | undefined>();
 
   function handleAdd() {
-    setEditProxy(undefined)
-    setDialogOpen(true)
+    setEditProxy(undefined);
+    setDialogOpen(true);
   }
 
   function handleEdit(proxy: Proxy) {
-    setEditProxy(proxy)
-    setDialogOpen(true)
+    setEditProxy(proxy);
+    setDialogOpen(true);
   }
 
   function handleDialogChange(open: boolean) {
-    setDialogOpen(open)
-    if (!open) setEditProxy(undefined)
+    setDialogOpen(open);
+    if (!open) setEditProxy(undefined);
   }
 
   return (
@@ -36,5 +36,5 @@ export default function App() {
 
       <ProxyDialog open={dialogOpen} onOpenChange={handleDialogChange} proxy={editProxy} />
     </div>
-  )
+  );
 }

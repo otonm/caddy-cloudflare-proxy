@@ -1,18 +1,18 @@
-import type { Request, Response, NextFunction } from 'express'
+import type { NextFunction, Request, Response } from 'express';
 
-const TAILSCALE_IPV4 = /^100\./
-const TAILSCALE_IPV6 = /^fd7a:/i
+const TAILSCALE_IPV4 = /^100\./;
+const TAILSCALE_IPV6 = /^fd7a:/i;
 
 export function tailscaleAuth(req: Request, res: Response, next: NextFunction) {
   if (process.env.DISABLE_AUTH === 'true') {
-    return next()
+    return next();
   }
 
-  const ip = req.socket.remoteAddress ?? ''
+  const ip = req.socket.remoteAddress ?? '';
 
   if (TAILSCALE_IPV4.test(ip) || TAILSCALE_IPV6.test(ip)) {
-    return next()
+    return next();
   }
 
-  res.status(403).json({ error: 'Forbidden: Tailscale connection required' })
+  res.status(403).json({ error: 'Forbidden: Tailscale connection required' });
 }

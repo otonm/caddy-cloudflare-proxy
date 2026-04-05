@@ -3,3 +3,4 @@ dist/
 .env
 data/
 *.tmp.json
+dist/node_modules/

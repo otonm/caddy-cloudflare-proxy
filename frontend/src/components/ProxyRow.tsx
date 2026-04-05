@@ -1,7 +1,5 @@
-import { useState } from 'react'
-import { Pencil, Trash2 } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Pencil, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,38 +10,40 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
-import { TableCell, TableRow } from '@/components/ui/table'
-import { useProxyStatus } from '@/hooks/useProxyStatus'
-import type { Proxy, ProxyStatus } from '@/types'
+} from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { TableCell, TableRow } from '@/components/ui/table';
+import { useProxyStatus } from '@/hooks/useProxyStatus';
+import type { Proxy, ProxyStatus } from '@/types';
 
 function StatusBadge({ id }: { id: string }) {
-  const { data, isLoading } = useProxyStatus(id)
+  const { data, isLoading } = useProxyStatus(id);
 
-  const status: ProxyStatus = isLoading ? 'loading' : (data?.status ?? 'error')
+  const status: ProxyStatus = isLoading ? 'loading' : (data?.status ?? 'error');
 
   const variants: Record<ProxyStatus, { label: string; className: string }> = {
     active: { label: 'active', className: 'bg-green-100 text-green-800 border-green-200' },
     error: { label: 'error', className: 'bg-red-100 text-red-800 border-red-200' },
     loading: { label: 'checking', className: 'bg-gray-100 text-gray-500 border-gray-200' },
-  }
+  };
 
-  const { label, className } = variants[status]
+  const { label, className } = variants[status];
   return (
     <Badge variant="outline" className={className} title={data?.reason}>
       {label}
     </Badge>
-  )
+  );
 }
 
 interface ProxyRowProps {
-  proxy: Proxy
-  onEdit: () => void
-  onDelete: () => void
+  proxy: Proxy;
+  onEdit: () => void;
+  onDelete: () => void;
 }
 
 export function ProxyRow({ proxy, onEdit, onDelete }: ProxyRowProps) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
 
   return (
     <TableRow>
@@ -54,12 +54,22 @@ export function ProxyRow({ proxy, onEdit, onDelete }: ProxyRowProps) {
         {proxy.upstream.type} · {proxy.upstream.ref}:{proxy.upstream.port}
       </TableCell>
       <TableCell>
-        {proxy._pending
-          ? <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200">pending</Badge>
-          : <StatusBadge id={proxy.id} />}
+        {proxy._pending ? (
+          <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200">
+            pending
+          </Badge>
+        ) : (
+          <StatusBadge id={proxy.id} />
+        )}
       </TableCell>
       <TableCell className="text-right">
-        <Button variant="ghost" size="icon" onClick={onEdit} disabled={proxy._pending} aria-label="Edit proxy">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onEdit}
+          disabled={proxy._pending}
+          aria-label="Edit proxy"
+        >
           <Pencil className="h-4 w-4" />
         </Button>
         <AlertDialog open={open} onOpenChange={setOpen}>
@@ -82,8 +92,8 @@ export function ProxyRow({ proxy, onEdit, onDelete }: ProxyRowProps) {
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => {
-                  setOpen(false)
-                  onDelete()
+                  setOpen(false);
+                  onDelete();
                 }}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
@@ -94,5 +104,5 @@ export function ProxyRow({ proxy, onEdit, onDelete }: ProxyRowProps) {
         </AlertDialog>
       </TableCell>
     </TableRow>
-  )
+  );
 }

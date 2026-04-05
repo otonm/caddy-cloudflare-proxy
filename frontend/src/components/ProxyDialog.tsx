@@ -1,24 +1,24 @@
-import { useEffect } from 'react'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { Loader2 } from 'lucide-react'
-import { FormProvider, useForm } from 'react-hook-form'
-import { z } from 'zod'
-import { Button } from '@/components/ui/button'
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
+import { FormProvider, useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { CloudflarePicker } from '@/components/CloudflarePicker';
+import { TLSSection } from '@/components/TLSSection';
+import { UpstreamPicker } from '@/components/UpstreamPicker';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { CloudflarePicker } from '@/components/CloudflarePicker'
-import { TLSSection } from '@/components/TLSSection'
-import { UpstreamPicker } from '@/components/UpstreamPicker'
-import { useConfig } from '@/hooks/useConfig'
-import { useCreateProxy, useUpdateProxy } from '@/hooks/useProxies'
-import type { Proxy } from '@/types'
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useConfig } from '@/hooks/useConfig';
+import { useCreateProxy, useUpdateProxy } from '@/hooks/useProxies';
+import type { Proxy } from '@/types';
 
 // ─── Zod schema ───────────────────────────────────────────────────────────────
 
@@ -51,23 +51,23 @@ const proxyFormSchema = z.object({
       message: 'Email required when TLS is enabled',
       path: ['email'],
     }),
-})
+});
 
-export type ProxyFormValues = z.infer<typeof proxyFormSchema>
+export type ProxyFormValues = z.infer<typeof proxyFormSchema>;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface ProxyDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  proxy?: Proxy
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  proxy?: Proxy;
 }
 
 export function ProxyDialog({ open, onOpenChange, proxy }: ProxyDialogProps) {
-  const isEdit = !!proxy
-  const { data: config } = useConfig()
-  const createMutation = useCreateProxy()
-  const updateMutation = useUpdateProxy()
+  const isEdit = !!proxy;
+  const { data: config } = useConfig();
+  const createMutation = useCreateProxy();
+  const updateMutation = useUpdateProxy();
 
   const form = useForm<ProxyFormValues>({
     resolver: zodResolver(proxyFormSchema),
@@ -77,11 +77,11 @@ export function ProxyDialog({ open, onOpenChange, proxy }: ProxyDialogProps) {
       cloudflare: { zoneId: '', recordChoice: 'new', recordId: undefined },
       tls: { enabled: false, email: '' },
     },
-  })
+  });
 
   // Populate form when editing or when config loads
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
     if (proxy) {
       form.reset({
         domain: proxy.domain,
@@ -91,18 +91,18 @@ export function ProxyDialog({ open, onOpenChange, proxy }: ProxyDialogProps) {
           enabled: proxy.tls.enabled,
           email: proxy.tls.email ?? config?.acmeEmail ?? '',
         },
-      })
+      });
     } else {
       form.reset({
         domain: '',
         upstream: { type: 'docker', ref: '', port: 80 },
         cloudflare: { zoneId: '', recordChoice: 'new', recordId: undefined },
         tls: { enabled: false, email: config?.acmeEmail ?? '' },
-      })
+      });
     }
-  }, [open, proxy, config])
+  }, [open, proxy, config, form.reset]);
 
-  const isPending = createMutation.isPending || updateMutation.isPending
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   function onSubmit(values: ProxyFormValues) {
     const apiData = {
@@ -118,15 +118,15 @@ export function ProxyDialog({ open, onOpenChange, proxy }: ProxyDialogProps) {
         enabled: values.tls.enabled,
         email: values.tls.email || undefined,
       },
-    }
+    };
 
     if (isEdit) {
       updateMutation.mutate(
         { id: proxy.id, data: apiData },
-        { onSuccess: () => onOpenChange(false) }
-      )
+        { onSuccess: () => onOpenChange(false) },
+      );
     } else {
-      createMutation.mutate(apiData, { onSuccess: () => onOpenChange(false) })
+      createMutation.mutate(apiData, { onSuccess: () => onOpenChange(false) });
     }
   }
 
@@ -142,15 +142,9 @@ export function ProxyDialog({ open, onOpenChange, proxy }: ProxyDialogProps) {
             {/* Domain */}
             <div className="space-y-1">
               <Label htmlFor="domain">Domain</Label>
-              <Input
-                id="domain"
-                placeholder="app.example.com"
-                {...form.register('domain')}
-              />
+              <Input id="domain" placeholder="app.example.com" {...form.register('domain')} />
               {form.formState.errors.domain && (
-                <p className="text-destructive text-xs">
-                  {form.formState.errors.domain.message}
-                </p>
+                <p className="text-destructive text-xs">{form.formState.errors.domain.message}</p>
               )}
             </div>
 
@@ -176,5 +170,5 @@ export function ProxyDialog({ open, onOpenChange, proxy }: ProxyDialogProps) {
         </FormProvider>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

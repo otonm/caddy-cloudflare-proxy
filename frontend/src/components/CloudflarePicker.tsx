@@ -1,49 +1,52 @@
-import { useEffect } from 'react'
-import type { Control } from 'react-hook-form'
-import { Controller, useFormContext, useWatch } from 'react-hook-form'
-import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { useEffect } from 'react';
+import type { Control } from 'react-hook-form';
+import { Controller, useFormContext, useWatch } from 'react-hook-form';
+import type { ProxyFormValues } from '@/components/ProxyDialog';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
-import { useCloudflareRecords, useCloudflareZones } from '@/hooks/useCloudflare'
-import type { ProxyFormValues } from '@/components/ProxyDialog'
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useCloudflareRecords, useCloudflareZones } from '@/hooks/useCloudflare';
 
 interface CloudflarePickerProps {
-  control: Control<ProxyFormValues>
-  editMode?: boolean
+  control: Control<ProxyFormValues>;
+  editMode?: boolean;
 }
 
 export function CloudflarePicker({ control, editMode }: CloudflarePickerProps) {
-  const { setValue, formState: { errors } } = useFormContext<ProxyFormValues>()
-  const zones = useCloudflareZones()
+  const {
+    setValue,
+    formState: { errors },
+  } = useFormContext<ProxyFormValues>();
+  const zones = useCloudflareZones();
 
-  const zoneId = useWatch({ control, name: 'cloudflare.zoneId' })
-  const recordChoice = useWatch({ control, name: 'cloudflare.recordChoice' })
-  const domain = useWatch({ control, name: 'domain' })
+  const zoneId = useWatch({ control, name: 'cloudflare.zoneId' });
+  const recordChoice = useWatch({ control, name: 'cloudflare.recordChoice' });
+  const domain = useWatch({ control, name: 'domain' });
 
-  const records = useCloudflareRecords(zoneId || null)
-  const aRecords = records.data?.filter((r) => r.type === 'A') ?? []
+  const records = useCloudflareRecords(zoneId || null);
+  const aRecords = records.data?.filter((r) => r.type === 'A') ?? [];
 
   // Auto-select first zone when zones load and nothing is selected yet
   useEffect(() => {
     if (zones.data && zones.data.length > 0 && !zoneId) {
-      setValue('cloudflare.zoneId', zones.data[0].id)
+      setValue('cloudflare.zoneId', zones.data[0].id);
     }
-  }, [zones.data])
+  }, [zones.data, zoneId, setValue]);
 
-  const selectedZoneName = zones.data?.find((z) => z.id === zoneId)?.name
+  const selectedZoneName = zones.data?.find((z) => z.id === zoneId)?.name;
 
   const duplicateExists =
     recordChoice === 'new' &&
     !!domain &&
     !!zoneId &&
-    aRecords.some((r) => r.name === domain || r.name === domain + '.')
+    aRecords.some((r) => r.name === domain || r.name === `${domain}.`);
 
   return (
     <div className="space-y-3">
@@ -61,8 +64,8 @@ export function CloudflarePicker({ control, editMode }: CloudflarePickerProps) {
               <Select
                 value={field.value}
                 onValueChange={(v) => {
-                  field.onChange(v)
-                  setValue('cloudflare.recordId', undefined)
+                  field.onChange(v);
+                  setValue('cloudflare.recordId', undefined);
                 }}
               >
                 <SelectTrigger id="cf-zone">
@@ -157,8 +160,8 @@ export function CloudflarePicker({ control, editMode }: CloudflarePickerProps) {
 
       {duplicateExists && (
         <p className="text-amber-600 text-xs">
-          Warning: an A record for <strong>{domain}</strong> already exists in this zone.
-          Creating a new one may conflict or overwrite it.
+          Warning: an A record for <strong>{domain}</strong> already exists in this zone. Creating a
+          new one may conflict or overwrite it.
         </p>
       )}
 
@@ -168,5 +171,5 @@ export function CloudflarePicker({ control, editMode }: CloudflarePickerProps) {
         </p>
       )}
     </div>
-  )
+  );
 }

@@ -1,27 +1,19 @@
-import { useState } from 'react'
-import { Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { ProxyRow } from '@/components/ProxyRow'
-import { useDeleteProxy, useProxies } from '@/hooks/useProxies'
-import type { Proxy } from '@/types'
+import { Plus } from 'lucide-react';
+import { ProxyRow } from '@/components/ProxyRow';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useDeleteProxy, useProxies } from '@/hooks/useProxies';
+import type { Proxy } from '@/types';
 
 interface ProxyTableProps {
-  onAdd: () => void
-  onEdit: (proxy: Proxy) => void
+  onAdd: () => void;
+  onEdit: (proxy: Proxy) => void;
 }
 
 export function ProxyTable({ onAdd, onEdit }: ProxyTableProps) {
-  const { data: proxies, isLoading, isError } = useProxies()
-  const deleteMutation = useDeleteProxy()
+  const { data: proxies, isLoading, isError } = useProxies();
+  const deleteMutation = useDeleteProxy();
 
   if (isLoading) {
     return (
@@ -30,7 +22,7 @@ export function ProxyTable({ onAdd, onEdit }: ProxyTableProps) {
           <Skeleton key={i} className="h-12 w-full rounded-md" />
         ))}
       </div>
-    )
+    );
   }
 
   if (isError) {
@@ -38,7 +30,7 @@ export function ProxyTable({ onAdd, onEdit }: ProxyTableProps) {
       <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
         Failed to load proxies. Is the backend running?
       </div>
-    )
+    );
   }
 
   return (
@@ -83,5 +75,5 @@ export function ProxyTable({ onAdd, onEdit }: ProxyTableProps) {
         </div>
       )}
     </div>
-  )
+  );
 }

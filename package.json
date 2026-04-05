@@ -8,9 +8,14 @@
   ],
   "scripts": {
     "dev": "concurrently -n backend,frontend -c cyan,magenta \"npm run dev -w backend\" \"npm run dev -w frontend\"",
-    "build": "npm run build -w backend && npm run build -w frontend"
+    "build": "npm run build -w backend && npm run build -w frontend",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "check": "biome check --write .",
+    "ci": "biome ci ."
   },
   "devDependencies": {
+    "@biomejs/biome": "2.4.10",
     "concurrently": "^9.0.0"
   }
 }

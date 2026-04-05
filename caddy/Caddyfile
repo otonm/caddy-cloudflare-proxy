@@ -1,8 +1,0 @@
-{
-    # Caddy admin API — listen on all interfaces within Docker network
-    admin 0.0.0.0:2019
-
-    # Global ACME/TLS settings — Cloudflare DNS-01 challenge
-    acme_dns cloudflare {env.CF_API_TOKEN}
-    email {env.ACME_EMAIL}
-}

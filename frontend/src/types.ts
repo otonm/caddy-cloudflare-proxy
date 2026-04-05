@@ -5,6 +5,7 @@ export interface Proxy {
     type: 'docker' | 'tailscale' | 'manual';
     ref: string;
     port: number;
+    publicIp?: string;
   };
   cloudflare: {
     zoneId: string;
@@ -21,7 +22,7 @@ export interface Proxy {
 
 export interface CreateProxyInput {
   domain: string;
-  upstream: { type: 'docker' | 'tailscale' | 'manual'; ref: string; port: number };
+  upstream: { type: 'docker' | 'tailscale' | 'manual'; ref: string; port: number; publicIp?: string };
   cloudflare: { zoneId: string; recordId?: string };
   tls: { enabled: boolean; email?: string };
 }
@@ -66,6 +67,11 @@ export interface ProxyStatusResult {
 
 export interface AppConfig {
   acmeEmail: string;
+}
+
+export interface ExternalIps {
+  tailscale: string | null;
+  public: string | null;
 }
 
 // Frontend-only: visual states including loading

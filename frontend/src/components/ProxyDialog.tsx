@@ -27,11 +27,18 @@ const proxyFormSchema = z.object({
     .string()
     .min(1, 'Required')
     .regex(/^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/, 'Must be a valid hostname'),
-  upstream: z.object({
-    type: z.enum(['docker', 'tailscale', 'manual']),
-    ref: z.string().min(1, 'Required'),
-    port: z.coerce.number().int().min(1, 'Min 1').max(65535, 'Max 65535'),
-  }),
+  upstream: z
+    .object({
+      type: z.enum(['docker', 'tailscale', 'manual']),
+      ref: z.string().min(1, 'Required'),
+      port: z.coerce.number().int().min(1, 'Min 1').max(65535, 'Max 65535'),
+      publicIp: z.string().optional(),
+    })
+    .superRefine((u, ctx) => {
+      if (u.type === 'docker' && !u.publicIp) {
+        ctx.addIssue({ code: 'custom', message: 'Select a public endpoint for DNS', path: ['publicIp'] });
+      }
+    }),
   cloudflare: z
     .object({
       zoneId: z.string().min(1, 'Zone is required'),

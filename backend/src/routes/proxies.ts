@@ -18,6 +18,7 @@ const upstreamSchema = z.object({
   type: z.enum(['docker', 'tailscale', 'manual']),
   ref: z.string().min(1),
   port: z.number().int().min(1).max(65535).default(80),
+  publicIp: z.string().optional(),
 });
 
 const createProxySchema = z.object({
@@ -129,13 +130,14 @@ router.post('/', async (req, res) => {
 
   try {
     const ip = await resolveUpstreamIp(upstream);
+    const dnsIp = upstream.publicIp ?? ip;
     const cfRecordId = cloudflare.recordId
       ? cloudflare.recordId
       : (
           await createRecord(cloudflare.zoneId, {
             name: domain,
             type: 'A',
-            content: ip,
+            content: dnsIp,
             proxied: false,
           })
         ).id;
@@ -199,13 +201,14 @@ router.put('/:id', async (req, res) => {
       await removeRoute(existing.id);
       await deleteRecord(existing.cloudflare.zoneId, existing.cloudflare.recordId);
       const ip = await resolveUpstreamIp(updated.upstream);
+      const dnsIp = updated.upstream.publicIp ?? ip;
       const newRecordId = patch.cloudflare?.recordId
         ? patch.cloudflare.recordId
         : (
             await createRecord(updated.cloudflare.zoneId, {
               name: updated.domain,
               type: 'A',
-              content: ip,
+              content: dnsIp,
               proxied: false,
             })
           ).id;

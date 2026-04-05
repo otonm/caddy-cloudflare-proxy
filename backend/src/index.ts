@@ -3,6 +3,7 @@ import express from 'express';
 import cloudflareRouter from './routes/cloudflare';
 import dockerRouter from './routes/docker';
 import proxiesRouter, { syncProxiesToCaddy } from './routes/proxies';
+import systemRouter from './routes/system';
 import tailscaleRouter from './routes/tailscale';
 
 const app = express();
@@ -24,6 +25,7 @@ app.use('/api/proxies', proxiesRouter);
 app.use('/api/docker', dockerRouter);
 app.use('/api/tailscale', tailscaleRouter);
 app.use('/api/cloudflare', cloudflareRouter);
+app.use('/api/system', systemRouter);
 
 // Serve frontend static files in production
 if (process.env.NODE_ENV === 'production') {

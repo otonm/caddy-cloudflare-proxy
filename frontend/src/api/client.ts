@@ -3,6 +3,7 @@ import type {
   ContainerInfo,
   CreateProxyInput,
   DnsRecord,
+  ExternalIps,
   Proxy,
   ProxyStatusResult,
   TailscaleNode,
@@ -65,4 +66,8 @@ export function getCloudflareRecords(zoneId: string): Promise<DnsRecord[]> {
 
 export function getConfig(): Promise<AppConfig> {
   return apiFetch('/api/config');
+}
+
+export function getExternalIps(): Promise<ExternalIps> {
+  return apiFetch('/api/system/externalIps');
 }

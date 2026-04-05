@@ -9,6 +9,7 @@ export interface Proxy {
     type: 'docker' | 'tailscale' | 'manual';
     ref: string;
     port: number;
+    publicIp?: string;
   };
   cloudflare: {
     zoneId: string;

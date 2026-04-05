@@ -1,15 +1,27 @@
+configs:
+  caddy_admin:
+    content: |
+      {
+        "admin": {
+          "listen": "0.0.0.0:2019",
+          "enforce_origin": false
+        }
+      }
+
 services:
   caddy:
     image: ghcr.io/caddybuilds/caddy-cloudflare:latest
     restart: unless-stopped
+    command: caddy run --config /etc/caddy/config.json --adapter json --resume
     ports:
       - 80:80
       - 443:443
     volumes:
       - caddy-data:/data
       - caddy-config:/config
-    environment:
-      CADDY_ADMIN: ${CADDY_ADMIN}
+    configs:
+      - source: caddy_admin
+        target: /etc/caddy/config.json
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:2019/config/"]
       interval: 10s

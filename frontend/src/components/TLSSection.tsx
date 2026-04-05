@@ -7,11 +7,15 @@ import type { ProxyFormValues } from '@/components/ProxyDialog'
 
 interface TLSSectionProps {
   control: Control<ProxyFormValues>
+  acmeEmail?: string
 }
 
-export function TLSSection({ control }: TLSSectionProps) {
+export function TLSSection({ control, acmeEmail }: TLSSectionProps) {
   const { register, formState: { errors } } = useFormContext<ProxyFormValues>()
   const tlsEnabled = useWatch({ control, name: 'tls.enabled' })
+  const currentEmail = useWatch({ control, name: 'tls.email' })
+  const showConfigHint = !!acmeEmail && !currentEmail
+  const showMatchHint = !!acmeEmail && currentEmail === acmeEmail
 
   return (
     <div className="space-y-3">
@@ -41,6 +45,14 @@ export function TLSSection({ control }: TLSSectionProps) {
           />
           {errors.tls?.email && (
             <p className="text-destructive text-xs">{errors.tls.email.message}</p>
+          )}
+          {showConfigHint && (
+            <p className="text-muted-foreground text-xs">
+              Configured ACME email: <span className="font-mono">{acmeEmail}</span>
+            </p>
+          )}
+          {showMatchHint && (
+            <p className="text-muted-foreground text-xs">Using configured ACME email</p>
           )}
         </div>
       )}

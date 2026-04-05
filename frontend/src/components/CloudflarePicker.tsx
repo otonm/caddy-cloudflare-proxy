@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import type { Control } from 'react-hook-form'
 import { Controller, useFormContext, useWatch } from 'react-hook-form'
 import { Label } from '@/components/ui/label'
@@ -24,9 +25,25 @@ export function CloudflarePicker({ control, editMode }: CloudflarePickerProps) {
 
   const zoneId = useWatch({ control, name: 'cloudflare.zoneId' })
   const recordChoice = useWatch({ control, name: 'cloudflare.recordChoice' })
+  const domain = useWatch({ control, name: 'domain' })
 
-  const records = useCloudflareRecords(recordChoice === 'existing' ? zoneId : null)
+  const records = useCloudflareRecords(zoneId || null)
   const aRecords = records.data?.filter((r) => r.type === 'A') ?? []
+
+  // Auto-select first zone when zones load and nothing is selected yet
+  useEffect(() => {
+    if (zones.data && zones.data.length > 0 && !zoneId) {
+      setValue('cloudflare.zoneId', zones.data[0].id)
+    }
+  }, [zones.data])
+
+  const selectedZoneName = zones.data?.find((z) => z.id === zoneId)?.name
+
+  const duplicateExists =
+    recordChoice === 'new' &&
+    !!domain &&
+    !!zoneId &&
+    aRecords.some((r) => r.name === domain || r.name === domain + '.')
 
   return (
     <div className="space-y-3">
@@ -49,9 +66,11 @@ export function CloudflarePicker({ control, editMode }: CloudflarePickerProps) {
                 }}
               >
                 <SelectTrigger id="cf-zone">
-                  <SelectValue placeholder="Select a zone" />
+                  <SelectValue placeholder="Select a zone">
+                    {selectedZoneName ?? zoneId}
+                  </SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="min-w-[var(--radix-select-trigger-width)] w-auto max-w-sm">
                   {zones.data?.map((z) => (
                     <SelectItem key={z.id} value={z.id}>
                       {z.name}
@@ -113,7 +132,7 @@ export function CloudflarePicker({ control, editMode }: CloudflarePickerProps) {
                   <SelectTrigger id="cf-record">
                     <SelectValue placeholder="Select a record" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="min-w-[var(--radix-select-trigger-width)] w-auto max-w-sm">
                     {aRecords.length === 0 ? (
                       <SelectItem value="_none" disabled>
                         No A records found
@@ -134,6 +153,13 @@ export function CloudflarePicker({ control, editMode }: CloudflarePickerProps) {
             <p className="text-destructive text-xs">{errors.cloudflare.recordId.message}</p>
           )}
         </div>
+      )}
+
+      {duplicateExists && (
+        <p className="text-amber-600 text-xs">
+          Warning: an A record for <strong>{domain}</strong> already exists in this zone.
+          Creating a new one may conflict or overwrite it.
+        </p>
       )}
 
       {recordChoice === 'new' && (

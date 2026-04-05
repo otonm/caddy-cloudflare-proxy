@@ -161,7 +161,7 @@ export function ProxyDialog({ open, onOpenChange, proxy }: ProxyDialogProps) {
             <CloudflarePicker control={form.control} editMode={isEdit} />
 
             {/* TLS */}
-            <TLSSection control={form.control} />
+            <TLSSection control={form.control} acmeEmail={config?.acmeEmail} />
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

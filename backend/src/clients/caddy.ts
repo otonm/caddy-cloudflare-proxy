@@ -68,14 +68,22 @@ export async function addRoute(route: CaddyRoute): Promise<void> {
 }
 
 export async function removeRoute(routeId: string): Promise<void> {
-  await caddyFetch(`/id/${encodeURIComponent(routeId)}`, { method: 'DELETE' });
+  const res = await fetch(`${BASE_URL}/id/${encodeURIComponent(routeId)}`, {
+    method: 'DELETE',
+    headers: ADMIN_HEADERS,
+  });
+  if (res.status === 404 || res.status === 400) return; // already gone
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Caddy admin API DELETE /id/${routeId} → ${res.status}: ${body}`);
+  }
 }
 
 // ─── TLS automation policies ─────────────────────────────────────────────────
 
 async function getAutomationPolicies(): Promise<CaddyTLSPolicy[]> {
   const res = await fetch(`${BASE_URL}/config/apps/tls/automation/policies`, { headers: ADMIN_HEADERS });
-  if (res.status === 404) return [];
+  if (res.status === 404 || res.status === 400) return []; // 400 = parent path not yet configured
   if (!res.ok) {
     const body = await res.text();
     throw new Error(`Caddy GET policies → ${res.status}: ${body}`);
@@ -124,5 +132,11 @@ export async function upsertTLSPolicy(domain: string, email: string, cfToken: st
 export async function removeTLSPolicy(domain: string): Promise<void> {
   const index = await findPolicyIndex(domain);
   if (index < 0) return;
-  await caddyFetch(`/config/apps/tls/automation/policies/${index}`, { method: 'DELETE' });
+  const path = `/config/apps/tls/automation/policies/${index}`;
+  const res = await fetch(`${BASE_URL}${path}`, { method: 'DELETE', headers: ADMIN_HEADERS });
+  if (res.status === 404 || res.status === 400) return; // already gone
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Caddy admin API DELETE ${path} → ${res.status}: ${body}`);
+  }
 }

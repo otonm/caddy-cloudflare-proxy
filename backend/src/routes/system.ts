@@ -1,14 +1,14 @@
-import os from 'node:os';
+import Docker from 'dockerode';
 import { Router } from 'express';
 import { listDevices } from '../clients/tailscale';
 
 const router = Router();
+const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 
 async function getTailscaleHostIp(): Promise<string | null> {
   try {
-    const hostname = os.hostname();
-    const devices = await listDevices();
-    const match = devices.find((d) => d.hostname === hostname);
+    const [info, devices] = await Promise.all([docker.info(), listDevices()]);
+    const match = devices.find((d) => d.hostname === info.Name);
     return match?.ipv4 ?? null;
   } catch {
     return null;

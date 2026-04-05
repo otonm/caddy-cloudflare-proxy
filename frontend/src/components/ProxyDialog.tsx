@@ -119,6 +119,7 @@ export function ProxyDialog({ open, onOpenChange, proxy }: ProxyDialogProps) {
     }
   }, [open, config?.acmeEmail]);
 
+  const recordChoice = form.watch('cloudflare.recordChoice');
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   function onSubmit(values: ProxyFormValues) {
@@ -159,7 +160,7 @@ export function ProxyDialog({ open, onOpenChange, proxy }: ProxyDialogProps) {
             {/* Domain */}
             <div className="space-y-1">
               <Label htmlFor="domain">Domain</Label>
-              <Input id="domain" placeholder="app.example.com" {...form.register('domain')} />
+              <Input id="domain" placeholder="app.example.com" {...form.register('domain')} disabled={recordChoice === 'existing'} />
               {form.formState.errors.domain && (
                 <p className="text-destructive text-xs">{form.formState.errors.domain.message}</p>
               )}

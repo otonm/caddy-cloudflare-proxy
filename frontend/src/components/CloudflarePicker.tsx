@@ -130,26 +130,40 @@ export function CloudflarePicker({ control, editMode }: CloudflarePickerProps) {
             <Controller
               control={control}
               name="cloudflare.recordId"
-              render={({ field }) => (
-                <Select value={field.value ?? ''} onValueChange={field.onChange}>
-                  <SelectTrigger id="cf-record">
-                    <SelectValue placeholder="Select a record" />
-                  </SelectTrigger>
-                  <SelectContent className="min-w-[var(--radix-select-trigger-width)] w-auto max-w-sm">
-                    {aRecords.length === 0 ? (
-                      <SelectItem value="_none" disabled>
-                        No A records found
-                      </SelectItem>
-                    ) : (
-                      aRecords.map((r) => (
-                        <SelectItem key={r.id} value={r.id}>
-                          {r.name} → {r.content}
+              render={({ field }) => {
+                const selectedRecord = aRecords.find((r) => r.id === (field.value ?? ''));
+                return (
+                  <Select
+                    value={field.value ?? ''}
+                    onValueChange={(id) => {
+                      field.onChange(id);
+                      const record = aRecords.find((r) => r.id === id);
+                      if (record) setValue('domain', record.name);
+                    }}
+                  >
+                    <SelectTrigger id="cf-record">
+                      <SelectValue placeholder="Select a record">
+                        {selectedRecord
+                          ? `${selectedRecord.name} → ${selectedRecord.content}`
+                          : undefined}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="min-w-[var(--radix-select-trigger-width)] w-auto max-w-sm">
+                      {aRecords.length === 0 ? (
+                        <SelectItem value="_none" disabled>
+                          No A records found
                         </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              )}
+                      ) : (
+                        aRecords.map((r) => (
+                          <SelectItem key={r.id} value={r.id}>
+                            {r.name} → {r.content}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                );
+              }}
             />
           )}
           {errors.cloudflare?.recordId && (

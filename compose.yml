@@ -5,7 +5,7 @@ configs:
         "admin": {
           "listen": "0.0.0.0:2019",
           "enforce_origin": false,
-          "origins": ["//0.0.0.0:2019", "//caddy:2019"]
+          "origins": ["http://caddy:2019"]
         }
       }
 
@@ -14,7 +14,7 @@ services:
     image: ghcr.io/caddybuilds/caddy-cloudflare:latest
     container_name: caddy
     restart: unless-stopped
-    command: caddy run --config /etc/caddy/config.json --adapter json --resume
+    command: caddy run --config /etc/caddy/config.json --resume
     ports:
       - 80:80
       - 443:443

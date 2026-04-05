@@ -1,5 +1,6 @@
 const BASE_URL = process.env.CADDY_ADMIN_URL ?? 'http://caddy:2019';
 const SERVER_NAME = 'proxy';
+const ADMIN_HEADERS = { 'Content-Type': 'application/json', Origin: 'http://localhost:2019' };
 
 export interface CaddyRoute {
   '@id': string;
@@ -20,7 +21,10 @@ export interface CaddyTLSPolicy {
 }
 
 async function caddyFetch(path: string, options?: RequestInit): Promise<Response> {
-  const res = await fetch(`${BASE_URL}${path}`, options);
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers: { ...ADMIN_HEADERS, ...options?.headers },
+  });
   if (!res.ok) {
     const body = await res.text();
     throw new Error(`Caddy admin API ${options?.method ?? 'GET'} ${path} → ${res.status}: ${body}`);
@@ -43,7 +47,7 @@ export async function addRoute(route: CaddyRoute): Promise<void> {
   // Try to append to the existing routes array
   const appendRes = await fetch(`${BASE_URL}/config/apps/http/servers/${SERVER_NAME}/routes/...`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: ADMIN_HEADERS,
     body: JSON.stringify(route),
   });
 
@@ -52,7 +56,7 @@ export async function addRoute(route: CaddyRoute): Promise<void> {
   // If the server/routes path doesn't exist yet, create it with a PUT
   const createRes = await fetch(`${BASE_URL}/config/apps/http/servers/${SERVER_NAME}/routes`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: ADMIN_HEADERS,
     body: JSON.stringify([route]),
   });
 
@@ -69,7 +73,7 @@ export async function removeRoute(routeId: string): Promise<void> {
 // ─── TLS automation policies ─────────────────────────────────────────────────
 
 async function getAutomationPolicies(): Promise<CaddyTLSPolicy[]> {
-  const res = await fetch(`${BASE_URL}/config/apps/tls/automation/policies`);
+  const res = await fetch(`${BASE_URL}/config/apps/tls/automation/policies`, { headers: ADMIN_HEADERS });
   if (res.status === 404) return [];
   if (!res.ok) {
     const body = await res.text();
@@ -101,13 +105,13 @@ export async function upsertTLSPolicy(domain: string, email: string, cfToken: st
   // Append to existing array; fall back to creating it if the path doesn't exist yet
   const appendRes = await fetch(`${BASE_URL}/config/apps/tls/automation/policies/...`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: ADMIN_HEADERS,
     body: JSON.stringify(policy),
   });
   if (appendRes.ok) return;
   const createRes = await fetch(`${BASE_URL}/config/apps/tls/automation/policies`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: ADMIN_HEADERS,
     body: JSON.stringify([policy]),
   });
   if (!createRes.ok) {

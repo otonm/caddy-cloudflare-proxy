@@ -4,7 +4,6 @@ import { Controller, useFormContext, useWatch } from 'react-hook-form';
 import type { ProxyFormValues } from '@/components/ProxyDialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Select,
   SelectContent,
@@ -15,7 +14,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useDockerContainers } from '@/hooks/useDockerContainers';
-import { useExternalIps } from '@/hooks/useExternalIps';
 import { useTailscaleNodes } from '@/hooks/useTailscaleNodes';
 import type { ContainerInfo } from '@/types';
 
@@ -39,7 +37,6 @@ export function UpstreamPicker({ control }: UpstreamPickerProps) {
     setValue('upstream.type', type);
     setValue('upstream.ref', '');
     setValue('upstream.port', 80);
-    setValue('upstream.publicIp', '');
   }
 
   const selectedContainerName = useWatch({ control, name: 'upstream.ref' });
@@ -113,7 +110,6 @@ export function UpstreamPicker({ control }: UpstreamPickerProps) {
             errors={errors}
             setValue={setValue}
           />
-          <DockerPublicEndpoint control={control} setValue={setValue} containerName={selectedContainerName} />
         </TabsContent>
 
         <TabsContent value="tailscale" className="space-y-3 pt-2">
@@ -271,74 +267,6 @@ function PortField({
       />
       {errors.upstream?.port && (
         <p className="text-destructive text-xs">{errors.upstream.port.message}</p>
-      )}
-    </div>
-  );
-}
-
-function DockerPublicEndpoint({
-  control,
-  setValue,
-  containerName,
-}: {
-  control: Control<ProxyFormValues>;
-  setValue: ReturnType<typeof useFormContext<ProxyFormValues>>['setValue'];
-  containerName: string;
-}) {
-  const externalIps = useExternalIps();
-  const publicIp = useWatch({ control, name: 'upstream.publicIp' });
-  const { errors } = useFormContext<ProxyFormValues>().formState;
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: containerName is intentional — resets selection when container changes
-  useEffect(() => {
-    setValue('upstream.publicIp', '');
-  }, [containerName]);
-
-  return (
-    <div className="space-y-1">
-      <Label>Public endpoint (for DNS)</Label>
-      {externalIps.isLoading ? (
-        <Skeleton className="h-16 w-full" />
-      ) : (
-        <RadioGroup
-          value={publicIp ?? ''}
-          onValueChange={(v) => setValue('upstream.publicIp', v)}
-          className="gap-2"
-        >
-          <div
-            className={`flex items-center gap-2 rounded border px-3 py-2 ${!externalIps.data?.tailscale ? 'opacity-40' : ''}`}
-          >
-            <RadioGroupItem
-              id="public-tailscale"
-              value={externalIps.data?.tailscale ?? ''}
-              disabled={!externalIps.data?.tailscale}
-            />
-            <Label htmlFor="public-tailscale" className="cursor-pointer font-normal">
-              Tailscale
-              <span className="text-muted-foreground ml-2 font-mono text-xs">
-                {externalIps.data?.tailscale ?? 'not detected'}
-              </span>
-            </Label>
-          </div>
-          <div
-            className={`flex items-center gap-2 rounded border px-3 py-2 ${!externalIps.data?.public ? 'opacity-40' : ''}`}
-          >
-            <RadioGroupItem
-              id="public-ip"
-              value={externalIps.data?.public ?? ''}
-              disabled={!externalIps.data?.public}
-            />
-            <Label htmlFor="public-ip" className="cursor-pointer font-normal">
-              Public IP
-              <span className="text-muted-foreground ml-2 font-mono text-xs">
-                {externalIps.data?.public ?? 'not detected'}
-              </span>
-            </Label>
-          </div>
-        </RadioGroup>
-      )}
-      {errors.upstream?.publicIp && (
-        <p className="text-destructive text-xs">{errors.upstream.publicIp.message}</p>
       )}
     </div>
   );

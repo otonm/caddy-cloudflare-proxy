@@ -4,7 +4,6 @@ import { z } from 'zod';
 import type { CaddyRoute } from '../clients/caddy';
 import { addRoute, getRoutes, removeRoute, removeTLSPolicy, upsertTLSPolicy } from '../clients/caddy';
 import { createRecord, deleteRecord } from '../clients/cloudflare';
-import { listRunningContainers } from '../clients/docker';
 import { listDevices } from '../clients/tailscale';
 import type { Proxy } from '../store/proxyStore';
 import * as store from '../store/proxyStore';
@@ -18,7 +17,7 @@ const upstreamSchema = z.object({
   type: z.enum(['docker', 'tailscale', 'manual']),
   ref: z.string().min(1),
   port: z.number().int().min(1).max(65535).default(80),
-  publicIp: z.string().optional(),
+  publicIp: z.string().min(1),
 });
 
 const createProxySchema = z.object({
@@ -38,16 +37,12 @@ const updateProxySchema = createProxySchema.partial();
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-export async function resolveUpstreamIp(upstream: Proxy['upstream']): Promise<string> {
-  debug('[proxies]', 'resolveUpstreamIp', upstream.type, upstream.ref);
+export async function resolveUpstreamHost(upstream: Proxy['upstream']): Promise<string> {
+  debug('[proxies]', 'resolveUpstreamHost', upstream.type, upstream.ref);
   if (upstream.type === 'docker') {
-    const containers = await listRunningContainers();
-    const c = containers.find((c) => c.name === upstream.ref);
-    if (!c) throw new Error(`Container not found: ${upstream.ref}`);
-    const ip = c.networkIps.bridge ?? Object.values(c.networkIps).find(Boolean);
-    if (!ip) throw new Error(`No network IP for container: ${upstream.ref}`);
-    debug('[proxies]', 'resolved docker ip', ip);
-    return ip;
+    // Use container name directly — Caddy and containers share the same Docker network
+    debug('[proxies]', 'using docker container name', upstream.ref);
+    return upstream.ref;
   }
   if (upstream.type === 'tailscale') {
     const devices = await listDevices();
@@ -76,7 +71,7 @@ export async function syncProxiesToCaddy(): Promise<void> {
   const proxies = await store.readAll();
   for (const proxy of proxies) {
     try {
-      const ip = await resolveUpstreamIp(proxy.upstream);
+      const ip = await resolveUpstreamHost(proxy.upstream);
       await addRoute(buildCaddyRoute(proxy.id, proxy.domain, ip, proxy.upstream.port));
       if (proxy.tls.enabled && proxy.tls.email) {
         await upsertTLSPolicy(proxy.domain, proxy.tls.email, process.env.CF_API_TOKEN!);
@@ -134,16 +129,15 @@ router.post('/', async (req, res) => {
 
   try {
     debug('[proxies]', 'create', { domain, upstream, cloudflare, tls });
-    const ip = await resolveUpstreamIp(upstream);
-    const dnsIp = upstream.publicIp ?? ip;
-    debug('[proxies]', 'dns target ip', dnsIp, cloudflare.recordId ? '(existing record)' : '(new record)');
+    const host = await resolveUpstreamHost(upstream);
+    debug('[proxies]', 'dns target ip', upstream.publicIp, cloudflare.recordId ? '(existing record)' : '(new record)');
     const cfRecordId = cloudflare.recordId
       ? cloudflare.recordId
       : (
           await createRecord(cloudflare.zoneId, {
             name: domain,
             type: 'A',
-            content: dnsIp,
+            content: upstream.publicIp,
             proxied: false,
           })
         ).id;
@@ -157,7 +151,7 @@ router.post('/', async (req, res) => {
       tls,
       createdAt: new Date().toISOString(),
     };
-    await addRoute(buildCaddyRoute(id, domain, ip, upstream.port));
+    await addRoute(buildCaddyRoute(id, domain, host, upstream.port));
     debug('[proxies]', 'caddy route added');
     if (tls.enabled && tls.email) {
       await upsertTLSPolicy(domain, tls.email, process.env.CF_API_TOKEN!);
@@ -210,20 +204,19 @@ router.put('/:id', async (req, res) => {
     if (needsRebuild) {
       await removeRoute(existing.id);
       await deleteRecord(existing.cloudflare.zoneId, existing.cloudflare.recordId);
-      const ip = await resolveUpstreamIp(updated.upstream);
-      const dnsIp = updated.upstream.publicIp ?? ip;
+      const host = await resolveUpstreamHost(updated.upstream);
       const newRecordId = patch.cloudflare?.recordId
         ? patch.cloudflare.recordId
         : (
             await createRecord(updated.cloudflare.zoneId, {
               name: updated.domain,
               type: 'A',
-              content: dnsIp,
+              content: updated.upstream.publicIp,
               proxied: false,
             })
           ).id;
       updated.cloudflare = { ...updated.cloudflare, recordId: newRecordId };
-      await addRoute(buildCaddyRoute(updated.id, updated.domain, ip, updated.upstream.port));
+      await addRoute(buildCaddyRoute(updated.id, updated.domain, host, updated.upstream.port));
     }
 
     // Remove old TLS policy if domain changed or TLS is being disabled

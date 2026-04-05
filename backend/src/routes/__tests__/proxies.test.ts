@@ -58,7 +58,7 @@ const mockRemoveTLSPolicy = vi.mocked(removeTLSPolicy);
 const baseProxy = {
   id: 'test-id',
   domain: 'app.example.com',
-  upstream: { type: 'manual' as const, ref: 'localhost', port: 8080 },
+  upstream: { type: 'manual' as const, ref: 'localhost', port: 8080, publicIp: '1.2.3.4' },
   cloudflare: { zoneId: 'zone1', recordId: 'rec1' },
   tls: { enabled: false },
   createdAt: '2024-01-01T00:00:00.000Z',
@@ -108,7 +108,7 @@ describe('POST /api/proxies — manual upstream', () => {
 
     const body = {
       domain: 'app.example.com',
-      upstream: { type: 'manual', ref: 'localhost', port: 8080 },
+      upstream: { type: 'manual', ref: 'localhost', port: 8080, publicIp: '1.2.3.4' },
       cloudflare: { zoneId: 'zone1' },
       tls: { enabled: false },
     };
@@ -121,7 +121,7 @@ describe('POST /api/proxies — manual upstream', () => {
     expect(mockCreateRecord).toHaveBeenCalledWith('zone1', {
       name: 'app.example.com',
       type: 'A',
-      content: 'localhost',
+      content: '1.2.3.4',
       proxied: false,
     });
     expect(mockAddRoute).toHaveBeenCalledTimes(1);
@@ -139,7 +139,7 @@ describe('POST /api/proxies — manual upstream', () => {
 
     const body = {
       domain: 'app.example.com',
-      upstream: { type: 'manual', ref: 'myhost' },
+      upstream: { type: 'manual', ref: 'myhost', publicIp: '1.2.3.4' },
       cloudflare: { zoneId: 'zone1' },
       tls: { enabled: false },
     };
@@ -159,7 +159,7 @@ describe('POST /api/proxies — manual upstream', () => {
     mockCreateRecord.mockRejectedValue(new Error('CF error'));
     const body = {
       domain: 'app.example.com',
-      upstream: { type: 'manual', ref: 'localhost', port: 8080 },
+      upstream: { type: 'manual', ref: 'localhost', port: 8080, publicIp: '1.2.3.4' },
       cloudflare: { zoneId: 'zone1' },
       tls: { enabled: false },
     };
@@ -170,26 +170,38 @@ describe('POST /api/proxies — manual upstream', () => {
 });
 
 describe('POST /api/proxies — docker upstream', () => {
-  it('resolves container IP from docker client', async () => {
-    mockListContainers.mockResolvedValue([
-      {
-        id: 'cid',
-        name: 'myapp',
-        image: 'node:20',
-        ports: [{ internal: 3000 }],
-        networks: ['bridge'],
-        networkIps: { bridge: '172.17.0.5' },
-        status: 'Up',
-      },
-    ]);
+  it('uses container name as caddy dial target and publicIp for DNS', async () => {
     mockCreateRecord.mockResolvedValue({
       id: 'rec1',
       name: 'app.example.com',
       type: 'A',
-      content: '172.17.0.5',
+      content: '1.2.3.4',
       proxied: false,
     });
 
+    const body = {
+      domain: 'app.example.com',
+      upstream: { type: 'docker', ref: 'myapp', port: 3000, publicIp: '1.2.3.4' },
+      cloudflare: { zoneId: 'zone1' },
+      tls: { enabled: false },
+    };
+    const res = await request(app).post('/api/proxies').send(body);
+    expect(res.status).toBe(201);
+    expect(mockListContainers).not.toHaveBeenCalled();
+    expect(mockCreateRecord).toHaveBeenCalledWith(
+      'zone1',
+      expect.objectContaining({ content: '1.2.3.4' }),
+    );
+    expect(mockAddRoute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        handle: [expect.objectContaining({
+          upstreams: [{ dial: 'myapp:3000' }],
+        })],
+      }),
+    );
+  });
+
+  it('returns 400 when publicIp is missing', async () => {
     const body = {
       domain: 'app.example.com',
       upstream: { type: 'docker', ref: 'myapp', port: 3000 },
@@ -197,29 +209,12 @@ describe('POST /api/proxies — docker upstream', () => {
       tls: { enabled: false },
     };
     const res = await request(app).post('/api/proxies').send(body);
-    expect(res.status).toBe(201);
-    expect(mockCreateRecord).toHaveBeenCalledWith(
-      'zone1',
-      expect.objectContaining({ content: '172.17.0.5' }),
-    );
-  });
-
-  it('returns 500 when container is not found', async () => {
-    mockListContainers.mockResolvedValue([]);
-    const body = {
-      domain: 'app.example.com',
-      upstream: { type: 'docker', ref: 'missing', port: 3000 },
-      cloudflare: { zoneId: 'zone1' },
-      tls: { enabled: false },
-    };
-    const res = await request(app).post('/api/proxies').send(body);
-    expect(res.status).toBe(500);
-    expect(res.body.details).toContain('missing');
+    expect(res.status).toBe(400);
   });
 });
 
 describe('POST /api/proxies — tailscale upstream', () => {
-  it('resolves node IPv4 from tailscale client', async () => {
+  it('resolves node IPv4 for caddy and uses publicIp for DNS', async () => {
     mockListDevices.mockResolvedValue([
       { id: 'n1', hostname: 'mynode', ipv4: '100.64.0.1', ipv6: '', os: 'linux', online: true },
     ]);
@@ -227,21 +222,30 @@ describe('POST /api/proxies — tailscale upstream', () => {
       id: 'rec1',
       name: 'app.example.com',
       type: 'A',
-      content: '100.64.0.1',
+      content: '100.64.0.2',
       proxied: false,
     });
 
     const body = {
       domain: 'app.example.com',
-      upstream: { type: 'tailscale', ref: 'mynode', port: 8080 },
+      upstream: { type: 'tailscale', ref: 'mynode', port: 8080, publicIp: '100.64.0.2' },
       cloudflare: { zoneId: 'zone1' },
       tls: { enabled: false },
     };
     const res = await request(app).post('/api/proxies').send(body);
     expect(res.status).toBe(201);
+    // DNS uses publicIp (server's Tailscale IP), not the node's IP
     expect(mockCreateRecord).toHaveBeenCalledWith(
       'zone1',
-      expect.objectContaining({ content: '100.64.0.1' }),
+      expect.objectContaining({ content: '100.64.0.2' }),
+    );
+    // Caddy dials the node's Tailscale IP directly
+    expect(mockAddRoute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        handle: [expect.objectContaining({
+          upstreams: [{ dial: '100.64.0.1:8080' }],
+        })],
+      }),
     );
   });
 });

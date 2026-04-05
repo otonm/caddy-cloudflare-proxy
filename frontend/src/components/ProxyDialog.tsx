@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
-import { FormProvider, useForm } from 'react-hook-form';
+import { FormProvider, useForm, useFormContext, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { CloudflarePicker } from '@/components/CloudflarePicker';
 import { TLSSection } from '@/components/TLSSection';
@@ -16,7 +16,10 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useConfig } from '@/hooks/useConfig';
+import { useExternalIps } from '@/hooks/useExternalIps';
 import { useCreateProxy, useUpdateProxy } from '@/hooks/useProxies';
 import type { Proxy } from '@/types';
 
@@ -27,18 +30,12 @@ const proxyFormSchema = z.object({
     .string()
     .min(1, 'Required')
     .regex(/^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/, 'Must be a valid hostname'),
-  upstream: z
-    .object({
-      type: z.enum(['docker', 'tailscale', 'manual']),
-      ref: z.string().min(1, 'Required'),
-      port: z.coerce.number().int().min(1, 'Min 1').max(65535, 'Max 65535'),
-      publicIp: z.string().optional(),
-    })
-    .superRefine((u, ctx) => {
-      if (u.type === 'docker' && !u.publicIp) {
-        ctx.addIssue({ code: 'custom', message: 'Select a public endpoint for DNS', path: ['publicIp'] });
-      }
-    }),
+  upstream: z.object({
+    type: z.enum(['docker', 'tailscale', 'manual']),
+    ref: z.string().min(1, 'Required'),
+    port: z.coerce.number().int().min(1, 'Min 1').max(65535, 'Max 65535'),
+    publicIp: z.string().min(1, 'Select a public endpoint for DNS'),
+  }),
   cloudflare: z
     .object({
       zoneId: z.string().min(1, 'Zone is required'),
@@ -62,7 +59,64 @@ const proxyFormSchema = z.object({
 
 export type ProxyFormValues = z.infer<typeof proxyFormSchema>;
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── PublicEndpointPicker ─────────────────────────────────────────────────────
+
+function PublicEndpointPicker() {
+  const externalIps = useExternalIps();
+  const { setValue, formState: { errors } } = useFormContext<ProxyFormValues>();
+  const publicIp = useWatch<ProxyFormValues, 'upstream.publicIp'>({ name: 'upstream.publicIp' });
+
+  return (
+    <div className="space-y-1">
+      <Label>Public endpoint (for DNS)</Label>
+      {externalIps.isLoading ? (
+        <Skeleton className="h-16 w-full" />
+      ) : (
+        <RadioGroup
+          value={publicIp ?? ''}
+          onValueChange={(v) => setValue('upstream.publicIp', v, { shouldValidate: true })}
+          className="gap-2"
+        >
+          <div
+            className={`flex items-center gap-2 rounded border px-3 py-2 ${!externalIps.data?.tailscale ? 'opacity-40' : ''}`}
+          >
+            <RadioGroupItem
+              id="endpoint-tailscale"
+              value={externalIps.data?.tailscale ?? ''}
+              disabled={!externalIps.data?.tailscale}
+            />
+            <Label htmlFor="endpoint-tailscale" className="cursor-pointer font-normal">
+              Tailscale
+              <span className="text-muted-foreground ml-2 font-mono text-xs">
+                {externalIps.data?.tailscale ?? 'not detected'}
+              </span>
+            </Label>
+          </div>
+          <div
+            className={`flex items-center gap-2 rounded border px-3 py-2 ${!externalIps.data?.public ? 'opacity-40' : ''}`}
+          >
+            <RadioGroupItem
+              id="endpoint-public"
+              value={externalIps.data?.public ?? ''}
+              disabled={!externalIps.data?.public}
+            />
+            <Label htmlFor="endpoint-public" className="cursor-pointer font-normal">
+              Public IP
+              <span className="text-muted-foreground ml-2 font-mono text-xs">
+                {externalIps.data?.public ?? 'not detected'}
+              </span>
+            </Label>
+          </div>
+        </RadioGroup>
+      )}
+      {errors.upstream?.publicIp && (
+        <p className="text-destructive text-xs">{errors.upstream.publicIp.message}</p>
+      )}
+    </div>
+  );
+}
+
+// ─── ProxyDialog ──────────────────────────────────────────────────────────────
 
 interface ProxyDialogProps {
   open: boolean;
@@ -80,7 +134,7 @@ export function ProxyDialog({ open, onOpenChange, proxy }: ProxyDialogProps) {
     resolver: zodResolver(proxyFormSchema),
     defaultValues: {
       domain: '',
-      upstream: { type: 'docker', ref: '', port: 80 },
+      upstream: { type: 'docker', ref: '', port: 80, publicIp: '' },
       cloudflare: { zoneId: '', recordChoice: 'new', recordId: undefined },
       tls: { enabled: false, email: '' },
     },
@@ -103,7 +157,7 @@ export function ProxyDialog({ open, onOpenChange, proxy }: ProxyDialogProps) {
     } else {
       form.reset({
         domain: '',
-        upstream: { type: 'docker', ref: '', port: 80 },
+        upstream: { type: 'docker', ref: '', port: 80, publicIp: '' },
         cloudflare: { zoneId: '', recordChoice: 'new', recordId: undefined },
         tls: { enabled: false, email: config?.acmeEmail ?? '' },
       });
@@ -160,7 +214,12 @@ export function ProxyDialog({ open, onOpenChange, proxy }: ProxyDialogProps) {
             {/* Domain */}
             <div className="space-y-1">
               <Label htmlFor="domain">Domain</Label>
-              <Input id="domain" placeholder="app.example.com" {...form.register('domain')} disabled={recordChoice === 'existing'} />
+              <Input
+                id="domain"
+                placeholder="app.example.com"
+                {...form.register('domain')}
+                disabled={recordChoice === 'existing'}
+              />
               {form.formState.errors.domain && (
                 <p className="text-destructive text-xs">{form.formState.errors.domain.message}</p>
               )}
@@ -168,6 +227,9 @@ export function ProxyDialog({ open, onOpenChange, proxy }: ProxyDialogProps) {
 
             {/* Upstream */}
             <UpstreamPicker control={form.control} />
+
+            {/* Public endpoint (DNS target) */}
+            <PublicEndpointPicker />
 
             {/* Cloudflare */}
             <CloudflarePicker control={form.control} editMode={isEdit} />

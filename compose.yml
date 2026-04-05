@@ -4,7 +4,8 @@ configs:
       {
         "admin": {
           "listen": "0.0.0.0:2019",
-          "enforce_origin": false
+          "enforce_origin": false,
+          "origins": ["//0.0.0.0:2019", "//caddy:2019"]
         }
       }
 

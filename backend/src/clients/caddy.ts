@@ -1,6 +1,7 @@
 const BASE_URL = process.env.CADDY_ADMIN_URL ?? 'http://caddy:2019';
 const SERVER_NAME = 'proxy';
-const ADMIN_HEADERS = { 'Content-Type': 'application/json', Origin: 'http://localhost:2019' };
+const ADMIN_ORIGIN = new URL(BASE_URL).origin;
+const ADMIN_HEADERS = { 'Content-Type': 'application/json', Origin: ADMIN_ORIGIN };
 
 export interface CaddyRoute {
   '@id': string;

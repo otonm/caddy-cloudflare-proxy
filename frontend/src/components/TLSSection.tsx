@@ -49,7 +49,7 @@ export function TLSSection({ control, acmeEmail }: TLSSectionProps) {
           )}
           {!!acmeEmail && (
             <p className="text-muted-foreground text-xs">
-              Defaulting to ACME_EMAIL — edit to use a different address for this domain
+              Defaulting to ACME_EMAIL environmental variable. Edit to use a different address for this domain
             </p>
           )}
         </div>

@@ -79,7 +79,8 @@ export function ProxyDialog({ open, onOpenChange, proxy }: ProxyDialogProps) {
     },
   });
 
-  // Populate form when editing or when config loads
+  // Populate form on open/proxy change. config is intentionally omitted from deps
+  // to prevent re-running (and wiping user input) when the config query resolves.
   useEffect(() => {
     if (!open) return;
     if (proxy) {
@@ -100,7 +101,16 @@ export function ProxyDialog({ open, onOpenChange, proxy }: ProxyDialogProps) {
         tls: { enabled: false, email: config?.acmeEmail ?? '' },
       });
     }
-  }, [open, proxy, config, form.reset]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, proxy]);
+
+  // When config loads after the dialog is already open, back-fill email only
+  useEffect(() => {
+    if (!open || !config?.acmeEmail) return;
+    if (!form.getValues('tls.email')) {
+      form.setValue('tls.email', config.acmeEmail);
+    }
+  }, [open, config?.acmeEmail]);
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 

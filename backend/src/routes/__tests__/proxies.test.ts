@@ -26,9 +26,11 @@ vi.mock('../../clients/cloudflare', () => ({
 vi.mock('../../clients/caddy', () => ({
   addRoute: vi.fn(),
   removeRoute: vi.fn(),
+  upsertTLSPolicy: vi.fn(),
+  removeTLSPolicy: vi.fn(),
 }));
 
-import { addRoute, removeRoute } from '../../clients/caddy';
+import { addRoute, removeTLSPolicy, removeRoute, upsertTLSPolicy } from '../../clients/caddy';
 import { createRecord, deleteRecord } from '../../clients/cloudflare';
 import { listRunningContainers } from '../../clients/docker';
 import { listDevices } from '../../clients/tailscale';
@@ -50,6 +52,8 @@ const mockCreateRecord = vi.mocked(createRecord);
 const mockDeleteRecord = vi.mocked(deleteRecord);
 const mockAddRoute = vi.mocked(addRoute);
 const mockRemoveRoute = vi.mocked(removeRoute);
+const mockUpsertTLSPolicy = vi.mocked(upsertTLSPolicy);
+const mockRemoveTLSPolicy = vi.mocked(removeTLSPolicy);
 
 const baseProxy = {
   id: 'test-id',
@@ -67,6 +71,8 @@ beforeEach(() => {
   mockRemove.mockResolvedValue(undefined);
   mockAddRoute.mockResolvedValue(undefined);
   mockRemoveRoute.mockResolvedValue(undefined);
+  mockUpsertTLSPolicy.mockResolvedValue(undefined);
+  mockRemoveTLSPolicy.mockResolvedValue(undefined);
   mockDeleteRecord.mockResolvedValue(undefined);
 });
 

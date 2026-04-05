@@ -43,6 +43,7 @@ services:
       TS_API_KEY: ${TS_API_KEY}
       TS_TAILNET: ${TS_TAILNET}
       ACME_EMAIL: ${ACME_EMAIL}
+      DEBUG: ${DEBUG}
     depends_on:
       caddy:
         condition: service_healthy

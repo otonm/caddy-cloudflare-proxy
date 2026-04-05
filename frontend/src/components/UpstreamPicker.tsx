@@ -135,7 +135,7 @@ export function UpstreamPicker({ control }: UpstreamPickerProps) {
                     <SelectContent className="min-w-[var(--radix-select-trigger-width)] w-auto max-w-md">
                       {nodes.data?.map((n) => (
                         <SelectItem key={n.id} value={n.hostname}>
-                          {n.hostname}
+                          {n.name}
                           <span
                             className={`ml-2 text-xs ${n.online ? 'text-green-600' : 'text-muted-foreground'}`}
                           >

@@ -40,6 +40,7 @@ export interface ContainerInfo {
 export interface TailscaleNode {
   id: string;
   hostname: string;
+  name: string;
   ipv4: string | null;
   ipv6: string | null;
   os: string;

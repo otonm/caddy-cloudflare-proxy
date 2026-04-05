@@ -12,3 +12,9 @@ export function isUpstreamError(err: unknown): boolean {
   const code = (err as NodeJS.ErrnoException).code;
   return code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'ETIMEDOUT';
 }
+
+export function debug(namespace: string, ...args: unknown[]): void {
+  if (process.env.DEBUG === 'true') {
+    console.log(namespace, ...args);
+  }
+}

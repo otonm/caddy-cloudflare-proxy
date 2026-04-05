@@ -8,6 +8,7 @@ import { listDevices } from '../clients/tailscale'
 import { createRecord, deleteRecord } from '../clients/cloudflare'
 import { addRoute, getRoutes, removeRoute } from '../clients/caddy'
 import type { CaddyRoute } from '../clients/caddy'
+import { isUpstreamError } from '../utils'
 
 const router = Router()
 
@@ -105,7 +106,7 @@ router.get('/:id/status', async (req, res) => {
       res.json({ status: 'error', reason: 'Caddy route not found' })
     }
   } catch (err) {
-    res.status(500).json({ error: 'Failed to query Caddy', details: err instanceof Error ? err.message : null })
+    res.status(isUpstreamError(err) ? 502 : 500).json({ error: 'Failed to query Caddy', details: err instanceof Error ? err.message : null })
   }
 })
 
@@ -137,7 +138,7 @@ router.post('/', async (req, res) => {
 
     res.status(201).json(proxy)
   } catch (err) {
-    res.status(500).json({ error: 'Failed to create proxy', details: err instanceof Error ? err.message : null })
+    res.status(isUpstreamError(err) ? 502 : 500).json({ error: 'Failed to create proxy', details: err instanceof Error ? err.message : null })
   }
 })
 
@@ -185,7 +186,7 @@ router.put('/:id', async (req, res) => {
     await store.update(existing.id, updated)
     res.json(updated)
   } catch (err) {
-    res.status(500).json({ error: 'Failed to update proxy', details: err instanceof Error ? err.message : null })
+    res.status(isUpstreamError(err) ? 502 : 500).json({ error: 'Failed to update proxy', details: err instanceof Error ? err.message : null })
   }
 })
 
@@ -202,7 +203,7 @@ router.delete('/:id', async (req, res) => {
     await store.remove(proxy.id)
     res.status(204).send()
   } catch (err) {
-    res.status(500).json({ error: 'Failed to delete proxy', details: err instanceof Error ? err.message : null })
+    res.status(isUpstreamError(err) ? 502 : 500).json({ error: 'Failed to delete proxy', details: err instanceof Error ? err.message : null })
   }
 })
 

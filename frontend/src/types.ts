@@ -15,6 +15,8 @@ export interface Proxy {
     email?: string
   }
   createdAt: string
+  /** Client-only: true while an optimistic create is in flight */
+  _pending?: boolean
 }
 
 export interface CreateProxyInput {

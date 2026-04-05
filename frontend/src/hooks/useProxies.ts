@@ -11,11 +11,29 @@ export function useCreateProxy() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: createProxy,
+    onMutate: async (input) => {
+      await qc.cancelQueries({ queryKey: ['proxies'] })
+      const previous = qc.getQueryData<Proxy[]>(['proxies'])
+      const tempProxy: Proxy = {
+        id: `_pending_${Date.now()}`,
+        domain: input.domain,
+        upstream: input.upstream,
+        cloudflare: { zoneId: input.cloudflare.zoneId, recordId: '' },
+        tls: input.tls,
+        createdAt: new Date().toISOString(),
+        _pending: true,
+      }
+      qc.setQueryData<Proxy[]>(['proxies'], (old) => [...(old ?? []), tempProxy])
+      return { previous }
+    },
+    onError: (err: Error, _vars, ctx) => {
+      if (ctx?.previous) qc.setQueryData(['proxies'], ctx.previous)
+      toast.error(err.message)
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['proxies'] })
       toast.success('Proxy created')
     },
-    onError: (err: Error) => toast.error(err.message),
   })
 }
 

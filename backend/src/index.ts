@@ -38,12 +38,13 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 async function start() {
-  const required = ['CF_API_TOKEN', 'TS_API_KEY', 'TS_TAILNET', 'ACME_EMAIL']
-  for (const key of required) {
-    if (!process.env[key]) {
-      throw new Error(`Missing required env var: ${key}`)
-    }
+  const vars = ['CF_API_TOKEN', 'TS_API_KEY', 'TS_TAILNET', 'ACME_EMAIL']
+  const missing = vars.filter((k) => !process.env[k])
+  if (missing.length) {
+    console.error('[startup] Missing required environment variables:', missing.join(', '))
+    process.exit(1)
   }
+  console.log('[startup] Config OK — TS_TAILNET =', process.env.TS_TAILNET, ', ACME_EMAIL =', process.env.ACME_EMAIL)
 
   app.listen(PORT, () => {
     console.log(`App listening on port ${PORT}`)

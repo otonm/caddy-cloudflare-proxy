@@ -7,9 +7,11 @@ services:
       - "443:443"
       - "443:443/udp"
     volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./data/caddy:/data
-      - ./data/caddy-config:/config
+      - caddy-data:/data
+      - caddy-config:/config
+    configs:
+      - source: caddyfile
+        target: /etc/caddy/Caddyfile
     environment:
       CF_API_TOKEN: ${CF_API_TOKEN}
       ACME_EMAIL: ${ACME_EMAIL}
@@ -21,13 +23,13 @@ services:
       start_period: 5s
 
   app:
-    build: .
+    image: ghcr.io/otonm/caddy-cloudflare-proxy:latest
     restart: unless-stopped
     ports:
       - "${APP_PORT:-3000}:3000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./data/app:/data
+      - app-data:/data
     environment:
       NODE_ENV: production
       CF_API_TOKEN: ${CF_API_TOKEN}
@@ -35,8 +37,8 @@ services:
       TS_TAILNET: ${TS_TAILNET}
       CADDY_ADMIN_URL: ${CADDY_ADMIN_URL:-http://caddy:2019}
       ACME_EMAIL: ${ACME_EMAIL}
-      DATA_DIR: /data
-      APP_PORT: 3000
+      DATA_DIR: ${DATA_DIR:-/data}
+      APP_PORT: ${APP_PORT:-3000}
       DISABLE_AUTH: ${DISABLE_AUTH:-false}
     depends_on:
       caddy:
@@ -47,3 +49,17 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+
+volumes:
+  caddy-data:
+  caddy-config:
+  app-data:
+
+configs:
+  caddyfile:
+    content: |
+      {
+        admin 0.0.0.0:2019
+        acme_dns cloudflare {env.CF_API_TOKEN}
+        email {env.ACME_EMAIL}
+      }

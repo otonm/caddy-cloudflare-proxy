@@ -54,16 +54,19 @@ export function ProxyRow({ proxy, onEdit, onDelete }: ProxyRowProps) {
         {proxy.upstream.type} · {proxy.upstream.ref}:{proxy.upstream.port}
       </TableCell>
       <TableCell>
-        <StatusBadge id={proxy.id} />
+        {proxy._pending
+          ? <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200">pending</Badge>
+          : <StatusBadge id={proxy.id} />}
       </TableCell>
       <TableCell className="text-right">
-        <Button variant="ghost" size="icon" onClick={onEdit} aria-label="Edit proxy">
+        <Button variant="ghost" size="icon" onClick={onEdit} disabled={proxy._pending} aria-label="Edit proxy">
           <Pencil className="h-4 w-4" />
         </Button>
         <AlertDialog open={open} onOpenChange={setOpen}>
           <AlertDialogTrigger
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
             aria-label="Delete proxy"
+            disabled={proxy._pending}
           >
             <Trash2 className="h-4 w-4 text-destructive" />
           </AlertDialogTrigger>

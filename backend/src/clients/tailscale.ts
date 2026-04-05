@@ -8,16 +8,24 @@ export interface TailscaleNode {
 }
 
 export async function listDevices(): Promise<TailscaleNode[]> {
-  const apiKey = process.env.TS_API_KEY
-  const tailnet = process.env.TS_TAILNET
-  if (!apiKey || !tailnet) throw new Error('TS_API_KEY and TS_TAILNET are required')
+  const missing = ['TS_API_KEY', 'TS_TAILNET'].filter((k) => !process.env[k])
+  if (missing.length) throw new Error(`Missing required env vars: ${missing.join(', ')}`)
+  const apiKey = process.env.TS_API_KEY!
+  const tailnet = process.env.TS_TAILNET!
 
   const res = await fetch(
     `https://api.tailscale.com/api/v2/tailnet/${encodeURIComponent(tailnet)}/devices`,
     { headers: { Authorization: `Bearer ${apiKey}` } }
   )
   if (!res.ok) {
-    throw new Error(`Tailscale API error ${res.status}: ${await res.text()}`)
+    let detail = `HTTP ${res.status}`
+    try {
+      const body = (await res.json()) as { message?: string }
+      if (body.message) detail += `: ${body.message}`
+    } catch {
+      // body was not JSON; ignore
+    }
+    throw new Error(`Tailscale API error — ${detail} (tailnet: ${tailnet})`)
   }
 
   const data = (await res.json()) as { devices: TailscaleApiDevice[] }
